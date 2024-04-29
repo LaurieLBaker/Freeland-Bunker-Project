@@ -65,10 +65,12 @@ journal_77 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_co
 journal_80 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
 ```
 
-# Figure out where Freeland goes locally most often
 ```{r}
 journals <- dplyr::bind_rows(journal_71_72, journal_73, journal_74, journal_75, journal_76, journal_77, journal_80)
 ```
+
+
+# Figure out where Freeland goes locally most often
 ```{r}
 loc_place <- journals %>%
   select(journal, local_place, location) %>%
@@ -104,5 +106,14 @@ loc_count_1 %>%
    labs(y = "n", x = "Location", title = "Local Locations in Freeland Bunker's Journals")
 ```
 
+
+```{r}
+library(stringr)
+
+Home <-  dplyr::filter(journals, !grepl('Home| home', type))
+```
+```{r}
+
+```
 
 
