@@ -35,9 +35,16 @@ journal_75 <- read_csv("Data_Sets/journal_1875 - Sheet1.csv")
 journal_76 <- read_csv("Data_Sets/journal_1876 - Sheet1.csv")
 journal_77 <- read_csv("Data_Sets/journal_1877 - Sheet1.csv")
 journal_80 <- read_csv("Data_Sets/journal_1880 - Sheet1.csv")
+journal_86 <- read_csv("Data_Sets/journal_1886 - Sheet1.csv")
+View(journal_1886_Sheet1)
 
 ```
 
+```{r}
+#journals <- list.files(path = "Data_Sets/...", pattern = "*.csv", full.names = TRUE) %>% 
+#  map_df(~read_csv(.x) %>% mutate(quantity = as.character(quantity))) #%>%
+#  type_convert()
+```
 
 ```{r}
 journal_71_72$journal <- 1
@@ -48,27 +55,80 @@ journal_76$journal <- 5
 journal_77$journal <- 6
 
 journal_80$journal <- 9
+
+journal_86$journal <- 15
 ```
 
 ```{r}
 journal_71_72 <- journal_71_72 %>%
-  rename(transcription_accuracy = transcription)
+  rename(transcription_accuracy = transcription) %>%
+  mutate(image_path = as.character(image_path)) %>%
+  mutate(image_description = as.character(image_description))
+
+journal_75 <- journal_75 %>%
+  mutate(quantity = as.character(quantity)) %>%
+  mutate(latitude = as.logical(latitude)) %>%
+  mutate(latitude_origin = as.logical(latitude_origin)) %>%
+  mutate(longitude = as.logical(longitude)) %>%
+  mutate(longitude_origin = as.logical(longitude_origin))
+
+journal_76 <- journal_76 %>%
+  mutate(quantity = as.character(quantity)) %>%
+  mutate(latitude = as.logical(latitude)) %>%
+  mutate(latitude_origin = as.logical(latitude_origin)) %>%
+  mutate(longitude = as.logical(longitude)) %>%
+  mutate(longitude_origin = as.logical(longitude_origin)) %>%
+  mutate(image_path = as.character(image_path)) %>%
+  mutate(image_description = as.character(image_description)) %>%
+  mutate(noteworthy = as.logical(noteworthy))
+
+journal_77 <- journal_77 %>%
+  mutate(quantity = as.character(quantity)) %>%
+  mutate(image_path = as.character(image_path)) %>%
+  mutate(image_description = as.character(image_description)) %>%
+  mutate(noteworthy = as.logical(noteworthy)) %>%
+  mutate(temperature_am = as.logical(temperature_am))
+
+journal_80 <- journal_80 %>%
+  mutate(image_path = as.character(image_path)) %>%
+  mutate(image_description = as.character(image_description)) %>%
+  mutate(noteworthy = as.logical(noteworthy)) %>%
+  mutate(temperature_am = as.logical(temperature_am)) %>%
+  mutate(temperature_pm = as.logical(temperature_pm)) %>%
+  mutate(temperature_night = as.logical(temperature_night))
+  
+journal_86 <- journal_86 %>%
+  mutate(image_path = as.character(image_path)) %>%
+  mutate(image_description = as.character(image_description)) %>%
+  mutate(noteworthy = as.logical(noteworthy)) %>%
+  mutate(temperature_am = as.logical(temperature_am)) %>%
+  mutate(temperature_pm = as.logical(temperature_pm)) %>%
+  mutate(temperature_night = as.logical(temperature_night)) %>%
+  mutate(latitude = as.logical(latitude)) %>%
+  mutate(recorder = as.character(recorder)) %>%
+  mutate(notes = as.character(notes)) %>%
+  select(- ...37)
+
+  
+```
+
+
+
+```{r}
+#journal_71_72 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
+#journal_73 <-  journal_73 %>% mutate(across(.fns = as.character)) %>% type_convert()
+#journal_74 <-  journal_74 %>% mutate(across(.fns = as.character)) %>% type_convert()
+#journal_75 <-  journal_75 %>% mutate(across(.fns = as.character)) %>% type_convert()
+#journal_76 <-  journal_76 %>% mutate(across(.fns = as.character)) %>% type_convert()
+#journal_77 <-  journal_77 %>% mutate(across(.fns = as.character)) %>% type_convert()
+#journal_80 <-  journal_80 %>% mutate(across(.fns = as.character)) %>% type_convert()
+#journal_86 <-  journal_86 %>% mutate(across(.fns = as.character)) %>% type_convert()
 ```
 
 ```{r}
-journal_71_72 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
-journal_73 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
-journal_74 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
-journal_75 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
-journal_76 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
-journal_77 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
-journal_80 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
+journals <- dplyr::bind_rows(journal_71_72, journal_73, journal_74, journal_75, journal_76, journal_77, journal_80, journal_86)
 ```
 
-
-```{r}
-journals <- dplyr::bind_rows(journal_71_72, journal_73, journal_74, journal_75, journal_76, journal_77, journal_80)
-```
 
 ```{r}
 letters <- journals %>%
