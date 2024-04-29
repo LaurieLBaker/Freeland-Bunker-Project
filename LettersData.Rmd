@@ -1,0 +1,118 @@
+---
+title: "Text Analysis Work"
+author: "Noelle & Gael"
+date: '2024-04-15'
+output: html_document
+---
+```{r}
+install.packages(c("tidyverse", 
+                   "tidytext",
+                   "stopwords",
+                   "widyr",
+                   "tidygraph",
+                   "tidylo",
+                   "ggraph",
+                   "wordcloud",
+                   "dplyr"))
+```
+
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library("magrittr") 
+library(tidyverse)
+library(tidytext)
+```
+
+
+```{r}
+library(readr)
+journal_71_72 <- read_csv("Data_Sets/journal_1871_1872 - Sheet1 (1).csv")
+journal_73 <- read_csv("Data_Sets/journal_1873 - Sheet1.csv")
+journal_74 <- read_csv("Data_Sets/journal_1874 - Sheet1.csv")
+journal_75 <- read_csv("Data_Sets/journal_1875 - Sheet1.csv")
+journal_76 <- read_csv("Data_Sets/journal_1876 - Sheet1.csv")
+journal_77 <- read_csv("Data_Sets/journal_1877 - Sheet1.csv")
+journal_80 <- read_csv("Data_Sets/journal_1880 - Sheet1.csv")
+
+```
+
+
+```{r}
+journal_71_72$journal <- 1
+journal_73$journal <- 2
+journal_74$journal <- 3
+journal_75$journal <- 4
+journal_76$journal <- 5
+journal_77$journal <- 6
+
+journal_80$journal <- 9
+```
+
+```{r}
+journal_71_72 <- journal_71_72 %>%
+  rename(transcription_accuracy = transcription)
+```
+
+```{r}
+journal_71_72 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
+journal_73 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
+journal_74 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
+journal_75 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
+journal_76 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
+journal_77 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
+journal_80 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
+```
+
+
+```{r}
+journals <- dplyr::bind_rows(journal_71_72, journal_73, journal_74, journal_75, journal_76, journal_77, journal_80)
+```
+
+```{r}
+letters <- journals %>%
+  filter(letter != "no letter")
+```
+
+```{r}
+read_letters <- letters %>%
+  filter(letter_from != "NA")
+  
+```
+```{r}
+write_letters <- letters %>%
+  filter(letter_to != "NA")
+```
+
+# Count people Freeland most often recived letters from
+
+```{r}
+read_letters <- read_letters %>%
+  separate(letter_from, c("person_1", "person_2", "person_3", "person_4"), sep = ",")
+```
+```{r}
+per_1 <- read_letters %>%
+  select(person_1) %>%
+  rename(from = person_1)
+per_2 <- read_letters %>%
+  select(person_2) %>%
+  rename(from = person_2)
+per_3 <- read_letters %>%
+  select(person_3) %>%
+  rename(from = person_3)
+per_4 <- read_letters %>%
+  select(person_4) %>%
+  rename(from = person_4)
+
+read_letters <- dplyr::bind_rows(per_1, per_2, per_3, per_4)
+```
+
+```{r}
+(read_count <- read_letters %>%
+    count(from, sort = TRUE))
+```
+
+
+
+
