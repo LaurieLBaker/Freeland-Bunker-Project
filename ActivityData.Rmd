@@ -1,0 +1,108 @@
+---
+title: "Text Analysis Work"
+author: "Noelle & Gael"
+date: '2024-04-15'
+output: html_document
+---
+```{r}
+install.packages(c("tidyverse", 
+                   "tidytext",
+                   "stopwords",
+                   "widyr",
+                   "tidygraph",
+                   "tidylo",
+                   "ggraph",
+                   "wordcloud",
+                   "dplyr"))
+```
+
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library("magrittr") 
+library(tidyverse)
+library(tidytext)
+```
+
+
+```{r}
+library(readr)
+journal_71_72 <- read_csv("Data_Sets/journal_1871_1872 - Sheet1 (1).csv")
+journal_73 <- read_csv("Data_Sets/journal_1873 - Sheet1.csv")
+journal_74 <- read_csv("Data_Sets/journal_1874 - Sheet1.csv")
+journal_75 <- read_csv("Data_Sets/journal_1875 - Sheet1.csv")
+journal_76 <- read_csv("Data_Sets/journal_1876 - Sheet1.csv")
+journal_77 <- read_csv("Data_Sets/journal_1877 - Sheet1.csv")
+journal_80 <- read_csv("Data_Sets/journal_1880 - Sheet1.csv")
+
+```
+
+
+```{r}
+journal_71_72$journal <- 1
+journal_73$journal <- 2
+journal_74$journal <- 3
+journal_75$journal <- 4
+journal_76$journal <- 5
+journal_77$journal <- 6
+
+journal_80$journal <- 9
+```
+
+```{r}
+journal_71_72 <- journal_71_72 %>%
+  rename(transcription_accuracy = transcription)
+```
+
+```{r}
+journal_71_72 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
+journal_73 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
+journal_74 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
+journal_75 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
+journal_76 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
+journal_77 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
+journal_80 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
+```
+
+# Figure out where Freeland goes locally most often
+```{r}
+journals <- dplyr::bind_rows(journal_71_72, journal_73, journal_74, journal_75, journal_76, journal_77, journal_80)
+```
+```{r}
+loc_place <- journals %>%
+  select(journal, local_place, location) %>%
+  separate(local_place, c("place_1", "place_2", "place_3", "place_4"), sep = ",")
+```
+```{r}
+loc_1 <- loc_place %>%
+  select(place_1) %>%
+  rename(place = place_1)
+loc_2 <- loc_place %>%
+  select(place_2) %>%
+  rename(place = place_2)
+loc_3 <- loc_place %>%
+  select(place_3) %>%
+  rename(place = place_3)
+loc_4 <- loc_place %>%
+  select(place_4) %>%
+  rename(place = place_4)
+
+loc_count <- dplyr::bind_rows(loc_1, loc_2, loc_3, loc_4)
+```
+```{r}
+loc_count_1 <- loc_count %>%
+    count(place, sort = TRUE)
+```
+```{r}
+loc_count_1 %>%
+    filter(n > 50) %>%
+    filter(n < 700) %>% #700 to get rid of NA (may change)
+  ggplot(aes(x=place, y=n)) + 
+   geom_bar(stat = "identity")+
+    theme(axis.text.x = element_text(angle = 60, hjust = 1))+
+   labs(y = "n", x = "Location", title = "Local Locations in Freeland Bunker's Journals")
+```
+
+
+
