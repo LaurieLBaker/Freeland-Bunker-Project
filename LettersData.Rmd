@@ -113,6 +113,32 @@ read_letters <- dplyr::bind_rows(per_1, per_2, per_3, per_4)
     count(from, sort = TRUE))
 ```
 
+# Count people Freeland most often wrote letters to
 
+```{r}
+write_letters <- write_letters %>%
+  separate(letter_to, c("person_1", "person_2", "person_3", "person_4"), sep = ",")
+```
+```{r}
+per_1 <- write_letters %>%
+  select(person_1) %>%
+  rename(to = person_1)
+per_2 <- write_letters %>%
+  select(person_2) %>%
+  rename(to = person_2)
+per_3 <- write_letters %>%
+  select(person_3) %>%
+  rename(to = person_3)
+per_4 <- write_letters %>%
+  select(person_4) %>%
+  rename(to = person_4)
+
+write_letters <- dplyr::bind_rows(per_1, per_2, per_3, per_4)
+```
+
+```{r}
+(write_count <- write_letters %>%
+    count(to, sort = TRUE))
+```
 
 
