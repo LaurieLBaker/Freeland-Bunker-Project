@@ -159,8 +159,8 @@ loc_count_1 <- loc_count %>%
 ```
 ```{r}
 loc_count_1 %>%
-    filter(n > 50) %>%
-    filter(n < 700) %>% #700 to get rid of NA (may change)
+    filter(n > 30) %>%
+    filter(n < 2000) %>% #2000 to get rid of NA (may change)
   ggplot(aes(x=place, y=n)) + 
    geom_bar(stat = "identity")+
     theme(axis.text.x = element_text(angle = 60, hjust = 1))+
@@ -176,7 +176,7 @@ Home <-  dplyr::filter(journals, grepl('Home| home| Home', local_place))
 #https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
 ```
 ```{r}
-(journal_words <- journals %>%
+(journal_words <- Home %>%
     unnest_tokens(word, journal_entry) %>%
     count(journal, word, sort = TRUE) %>%
     filter(!word %in% stop_words$word))
