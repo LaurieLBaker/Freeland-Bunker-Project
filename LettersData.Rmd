@@ -167,6 +167,11 @@ per_4 <- read_letters %>%
 
 read_letters <- dplyr::bind_rows(per_1, per_2, per_3, per_4)
 ```
+```{r}
+read_letters <- read_letters %>%
+  mutate(from = str_to_title(from)) %>%
+  mutate(from = trimws(from, "both"))
+```
 
 ```{r}
 (read_count <- read_letters %>%
@@ -195,6 +200,12 @@ per_4 <- write_letters %>%
 
 write_letters <- dplyr::bind_rows(per_1, per_2, per_3, per_4)
 ```
+```{r}
+write_letters <- write_letters %>%
+  mutate(to = str_to_title(from)) %>%
+  mutate(to = trimws(from, "both"))
+```
+
 
 ```{r}
 (write_count <- write_letters %>%
