@@ -202,8 +202,8 @@ write_letters <- dplyr::bind_rows(per_1, per_2, per_3, per_4)
 ```
 ```{r}
 write_letters <- write_letters %>%
-  mutate(to = str_to_title(from)) %>%
-  mutate(to = trimws(from, "both"))
+  mutate(to = str_to_title(to)) %>%
+  mutate(to = trimws(to, "both"))
 ```
 
 

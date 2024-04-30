@@ -165,6 +165,9 @@ loc_count <- loc_count %>%
 loc_count <- loc_count %>%
     count(place, sort = TRUE)
 ```
+```{r}
+print(loc_count)
+```
 
 
 
@@ -200,10 +203,11 @@ journal_tf_idf <- journal_words %>%
 ```
 ```{r}
 journal_tf_idf %>%
+#  filter(tf_idf >= 0.02) %>%
     group_by(journal) %>%
     slice_max(tf_idf, n = 10) %>%
     ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = journal)) +
-    geom_col(show.legend = FALSE) +
+    geom_col(show.legend = FALSE, width = 0.5) +
     facet_wrap(vars(journal), scales = "free") +
     scale_x_continuous(expand = c(0,0)) +
     labs(y = NULL, x = "tf-idf", title = "Highest tf-idf words in Freeland Bunker's Journal entries associated with mention of being at home")
@@ -230,18 +234,76 @@ journal_tf_idf <- journal_words %>%
 ```
 ```{r}
 journal_tf_idf %>%
+  filter(tf_idf >= 0.02) %>%
     group_by(journal) %>%
     slice_max(tf_idf, n = 10) %>%
     ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = journal)) +
     geom_col(show.legend = FALSE) +
     facet_wrap(vars(journal), scales = "free") +
     scale_x_continuous(expand = c(0,0)) +
-    labs(y = NULL, x = "tf-idf", title = "Highest tf-idf words in Freeland Bunker's Journal entries associated with mention of being at home")
+    labs(y = NULL, x = "tf-idf", title = "Highest tf-idf words in Freeland Bunker's Journal entries associated with mention of being at The Lodge of Good Templars")
 ```
 
 
 # Frequent words in association with Hall
+```{r}
+library(stringr)
+
+Hall <-  dplyr::filter(journals, grepl('Hall|Hall | Hall| hall', local_place))
+
+#https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
+```
+```{r}
+(journal_words <- Hall %>%
+    unnest_tokens(word, journal_entry) %>%
+    count(journal, word, sort = TRUE) %>%
+    filter(!word %in% stop_words$word))
+```
+```{r}
+journal_tf_idf <- journal_words %>%
+    bind_tf_idf(word, journal, n) %>%
+    arrange(desc(tf_idf))
+```
+```{r}
+journal_tf_idf %>%
+  filter(tf_idf >= 0.02) %>%
+    group_by(journal) %>%
+    slice_max(tf_idf, n = 10) %>%
+    ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = journal)) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(vars(journal), scales = "free") +
+    scale_x_continuous(expand = c(0,0)) +
+    labs(y = NULL, x = "tf-idf", title = "Highest tf-idf words in Freeland Bunker's Journal entries associated with mention of being at The Hall")
+```
 
 # Frequent words in association with Shop
+```{r}
+Shop <-  dplyr::filter(journals, grepl('Shop|Shop | Shop| shop', local_place))
+
+#https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
+```
+
+```{r}
+(journal_words <- Shop %>%
+    unnest_tokens(word, journal_entry) %>%
+    count(journal, word, sort = TRUE) %>%
+    filter(!word %in% stop_words$word))
+```
+```{r}
+journal_tf_idf <- journal_words %>%
+    bind_tf_idf(word, journal, n) %>%
+    arrange(desc(tf_idf))
+```
+```{r}
+journal_tf_idf %>%
+  filter(tf_idf >= 0.02) %>%
+    group_by(journal) %>%
+    slice_max(tf_idf, n = 10) %>%
+    ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = journal)) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(vars(journal), scales = "free") +
+    scale_x_continuous(expand = c(0,0)) +
+    labs(y = NULL, x = "tf-idf", title = "Highest tf-idf words in Freeland Bunker's Journal entries associated with mention of being at The Shop")
+```
 
 # Frequent words in association with Wharf
