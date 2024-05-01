@@ -214,7 +214,7 @@ write_letters <- write_letters %>%
 ```
 
 ```{r}
-ben_kitt <-
-dplyr::filter(letters, grepl('Benjamin Kittridge|benjamin kittridge', journal_entry))
+ben_kitt <-letters %>%
+  filter(grepl('Benjamin Kittridge|benjamin kittridge', journal_entry))
 ```
 
