@@ -212,3 +212,9 @@ write_letters <- write_letters %>%
     count(to, sort = TRUE))
 
 ```
+
+```{r}
+ben_kitt <-
+dplyr::filter(letters, grepl('Benjamin Kittridge|benjamin kittridge', journal_entry))
+```
+
