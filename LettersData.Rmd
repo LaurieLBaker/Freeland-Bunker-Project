@@ -210,6 +210,5 @@ write_letters <- write_letters %>%
 ```{r}
 (write_count <- write_letters %>%
     count(to, sort = TRUE))
+
 ```
-
-
