@@ -362,3 +362,96 @@ journal_tf_idf %>%
     scale_x_continuous(expand = c(0,0)) +
     labs(y = NULL, x = "tf-idf", title = "Highest tf-idf words in Freeland Bunker's Journal entries associated with mention of being at The Leghorn Hospital")
 ```
+# Distribution of place mentions across journals
+```{r}
+loc_place <- journals %>%
+  select(journal, local_place, location) %>%
+  separate(local_place, c("place_1", "place_2", "place_3", "place_4"), sep = ",")
+```
+```{r}
+loc_1 <- loc_place %>%
+  select(place_1, journal) %>%
+  rename(place = place_1)
+loc_2 <- loc_place %>%
+  select(place_2, journal) %>%
+  rename(place = place_2)
+loc_3 <- loc_place %>%
+  select(place_3, journal) %>%
+  rename(place = place_3)
+loc_4 <- loc_place %>%
+  select(place_4, journal) %>%
+  rename(place = place_4)
+
+loc_count <- dplyr::bind_rows(loc_1, loc_2, loc_3, loc_4)
+```
+
+```{r}
+loc_count <- loc_count %>%
+  mutate(place = str_to_title(place)) %>%
+  mutate(place = trimws(place, "both")) #str_squish 
+
+```
+
+```{r}
+loc_count_1 <- loc_count %>%
+    filter(journal == 1) %>%
+           count(place) 
+loc_count_2 <- loc_count %>%
+    filter(journal == 2) %>%
+           count(place) 
+loc_count_3 <- loc_count %>%
+    filter(journal == 3) %>%
+           count(place) 
+loc_count_4 <- loc_count %>%
+    filter(journal == 4) %>%
+           count(place) 
+loc_count_5 <- loc_count %>%
+    filter(journal == 5) %>%
+           count(place) 
+loc_count_6 <- loc_count %>%
+    filter(journal == 6) %>%
+           count(place) 
+loc_count_9 <- loc_count %>%
+    filter(journal == 9) %>%
+           count(place) 
+loc_count_15 <- loc_count %>%
+    filter(journal == 15) %>%
+           count(place) 
+
+```
+```{r}
+loc_count_1$journal <- 1
+loc_count_2$journal <- 2
+loc_count_3$journal <- 3
+loc_count_4$journal <- 4
+loc_count_5$journal <- 5
+loc_count_6$journal <- 6
+loc_count_9$journal <- 9
+loc_count_15$journal <- 15
+```
+
+```{r}
+
+loc_count <- dplyr::bind_rows(loc_count_1, loc_count_2, loc_count_3, loc_count_4, loc_count_5, loc_count_6, loc_count_9, loc_count_15)
+```
+
+
+```{r}
+#journal_71_72$journal <- 1
+```
+
+
+```{r}
+loc_count %>%
+  group_by(journal) %>%
+ # filter(n < 500) %>%  #include home & Shop
+   filter(n < 40) %>%
+   filter(n > 19) %>%
+  #  filter(word != NA) %>%
+  ggplot(aes(x=place, y=n)) + 
+   geom_bar(stat = "identity")+
+   facet_wrap(vars(journal))+
+    theme(axis.text.x = element_text(angle = 60, hjust = 1))+
+   labs(y = "n", x = "Location", title = "Distribution of local place mentions across journals")
+```
+
