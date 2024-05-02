@@ -213,8 +213,51 @@ write_letters <- write_letters %>%
 
 ```
 
+
 ```{r}
 ben_kitt <-letters %>%
-  filter(grepl('Benjamin Kittridge|benjamin kittridge', journal_entry))
+  filter(grepl('Benjamin Kittridge|benjamin kittridge', letter_from))
+ben_kitt_2 <-letters %>%
+  filter(grepl('Benjamin Kittridge|benjamin kittridge', letter_to))
+
+ben_kitt <- dplyr::bind_rows(ben_kitt, ben_kitt_2)
 ```
+```{r}
+(BK_words <- ben_kitt %>%
+    unnest_tokens(word, journal_entry) %>%
+    count(journal, word, sort = TRUE) %>%
+    filter(!word %in% stop_words$word))
+```
+
+
+```{r}
+CC_Burr <-letters %>%
+  filter(grepl('Charles C. Burrill|C. C. Burrill', letter_from))
+CC_Burr_2 <-letters %>%
+  filter(grepl('Charles C. Burrill|C. C. Burrill', letter_to))
+
+CC_Burr <- dplyr::bind_rows(CC_Burr, CC_Burr_2)
+```
+```{r}
+(CC_words <- CC_Burr %>%
+    unnest_tokens(word, journal_entry) %>%
+    count(journal, word, sort = TRUE) %>%
+    filter(!word %in% stop_words$word))
+```
+
+```{r}
+Tom_Bunk <-letters %>%
+  filter(grepl('Thomas Bunker', letter_from))
+Tom_Bunk_2 <-letters %>%
+  filter(grepl('Thomas Bunker', letter_to))
+
+Tom_Bunk <- dplyr::bind_rows(Tom_Bunk, Tom_Bunk_2)
+```
+```{r}
+(TB_words <- Tom_Bunk %>%
+    unnest_tokens(word, journal_entry) %>%
+    count(journal, word, sort = TRUE) %>%
+    filter(!word %in% stop_words$word))
+```
+
 
