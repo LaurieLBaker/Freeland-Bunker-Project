@@ -42,12 +42,6 @@ journal_86 <- read_csv("Data_Sets/journal_1886 - Sheet1.csv")
 ```
 
 ```{r}
-#journals <- list.files(path = "Data_Sets/...", pattern = "*.csv", full.names = TRUE) %>% 
-#  map_df(~read_csv(.x) %>% mutate(quantity = as.character(quantity))) #%>%
-#  type_convert()
-```
-
-```{r}
 journal_71_72$journal <- 1
 journal_73$journal <- 2
 journal_74$journal <- 3
@@ -134,19 +128,6 @@ journal_84 <- journal_84 %>%
   mutate(notes = as.character(notes))
 ```
 
-
-
-```{r}
-#journal_71_72 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
-#journal_73 <-  journal_73 %>% mutate(across(.fns = as.character)) %>% type_convert()
-#journal_74 <-  journal_74 %>% mutate(across(.fns = as.character)) %>% type_convert()
-#journal_75 <-  journal_75 %>% mutate(across(.fns = as.character)) %>% type_convert()
-#journal_76 <-  journal_76 %>% mutate(across(.fns = as.character)) %>% type_convert()
-#journal_77 <-  journal_77 %>% mutate(across(.fns = as.character)) %>% type_convert()
-#journal_80 <-  journal_80 %>% mutate(across(.fns = as.character)) %>% type_convert()
-#journal_86 <-  journal_86 %>% mutate(across(.fns = as.character)) %>% type_convert()
-```
-
 ```{r}
 journals <- dplyr::bind_rows(journal_71_72, journal_73, journal_74, journal_75, journal_76, journal_77, journal_80, journal_86)
 ```
@@ -175,16 +156,16 @@ read_letters <- read_letters %>%
 ```
 ```{r}
 per_1 <- read_letters %>%
-  select(person_1) %>%
+  select(person_1, journal, journal_entry) %>%
   rename(from = person_1)
 per_2 <- read_letters %>%
-  select(person_2) %>%
+  select(person_2, journal, journal_entry) %>%
   rename(from = person_2)
 per_3 <- read_letters %>%
-  select(person_3) %>%
+  select(person_3, journal, journal_entry) %>%
   rename(from = person_3)
 per_4 <- read_letters %>%
-  select(person_4) %>%
+  select(person_4, journal, journal_entry) %>%
   rename(from = person_4)
 
 read_letters <- dplyr::bind_rows(per_1, per_2, per_3, per_4)
@@ -192,11 +173,13 @@ read_letters <- dplyr::bind_rows(per_1, per_2, per_3, per_4)
 ```{r}
 read_letters <- read_letters %>%
   mutate(from = str_to_title(from)) %>%
-  mutate(from = trimws(from, "both"))
+  mutate(from = trimws(from, "both")) %>%
+  filter(from != "NA")
 ```
 
 ```{r}
 (read_count <- read_letters %>%
+   filter(from!= "NA") %>%
     count(from, sort = TRUE))
 ```
 
@@ -208,16 +191,16 @@ write_letters <- write_letters %>%
 ```
 ```{r}
 per_1 <- write_letters %>%
-  select(person_1) %>%
+  select(person_1, journal, journal_entry) %>%
   rename(to = person_1)
 per_2 <- write_letters %>%
-  select(person_2) %>%
+  select(person_2, journal, journal_entry) %>%
   rename(to = person_2)
 per_3 <- write_letters %>%
-  select(person_3) %>%
+  select(person_3, journal, journal_entry) %>%
   rename(to = person_3)
 per_4 <- write_letters %>%
-  select(person_4) %>%
+  select(person_4, journal, journal_entry) %>%
   rename(to = person_4)
 
 write_letters <- dplyr::bind_rows(per_1, per_2, per_3, per_4)
@@ -225,12 +208,14 @@ write_letters <- dplyr::bind_rows(per_1, per_2, per_3, per_4)
 ```{r}
 write_letters <- write_letters %>%
   mutate(to = str_to_title(to)) %>%
-  mutate(to = trimws(to, "both"))
+  mutate(to = trimws(to, "both")) %>%
+  filter(to != "NA")
 ```
 
 
 ```{r}
 (write_count <- write_letters %>%
+   filter(to != "NA") %>%
     count(to, sort = TRUE))
 
 ```
@@ -282,4 +267,134 @@ Tom_Bunk <- dplyr::bind_rows(Tom_Bunk, Tom_Bunk_2)
     filter(!word %in% stop_words$word))
 ```
 
+# Find distribution across journals
 
+#Wrote
+
+```{r}
+count_1 <- write_letters %>%
+    filter(journal == 1) %>%
+           count(to) 
+count_2 <- write_letters %>%
+    filter(journal == 2) %>%
+           count(to) 
+count_3 <- write_letters %>%
+    filter(journal == 3) %>%
+           count(to)
+count_4 <- write_letters %>%
+    filter(journal == 4) %>%
+           count(to)
+count_5 <- write_letters %>%
+    filter(journal == 5) %>%
+           count(to)
+count_6 <- write_letters %>%
+    filter(journal == 6) %>%
+           count(to) 
+count_9 <- write_letters %>%
+    filter(journal == 9) %>%
+           count(to)
+count_12 <- write_letters %>%
+    filter(journal == 12) %>%
+           count(to)
+count_13 <- write_letters %>%
+    filter(journal == 13) %>%
+           count(to)
+count_15 <- write_letters %>%
+    filter(journal == 15) %>%
+           count(to) 
+
+```
+```{r}
+count_1$journal <- 1
+count_2$journal <- 2
+count_3$journal <- 3
+count_4$journal <- 4
+count_5$journal <- 5
+count_6$journal <- 6
+count_9$journal <- 9
+count_12$journal <- 12
+count_13$journal <- 13
+count_15$journal <- 15
+```
+
+```{r}
+
+to_count <- dplyr::bind_rows(count_1, count_2, count_3, count_4, count_5, count_6, count_9, count_12,count_13, count_15)
+```
+
+
+```{r}
+to_count %>%
+  group_by(journal) %>%
+   filter(n > 3) %>%
+  ggplot(aes(x=to, y=n)) + 
+   geom_bar(stat = "identity")+
+   facet_wrap(vars(journal))+
+    theme(axis.text.x = element_text(angle = 60, hjust = 1))+
+   labs(y = "n", x = "Location", title = "Distribution of letters written across journals")
+```
+
+#Read
+
+```{r}
+count_1 <- read_letters %>%
+    filter(journal == 1) %>%
+           count(from) 
+count_2 <- read_letters %>%
+    filter(journal == 2) %>%
+           count(from) 
+count_3 <- read_letters %>%
+    filter(journal == 3) %>%
+           count(from)
+count_4 <- read_letters %>%
+    filter(journal == 4) %>%
+           count(from)
+count_5 <- read_letters %>%
+    filter(journal == 5) %>%
+           count(from)
+count_6 <- read_letters %>%
+    filter(journal == 6) %>%
+           count(from) 
+count_9 <- read_letters %>%
+    filter(journal == 9) %>%
+           count(from)
+count_12 <- read_letters %>%
+    filter(journal == 12) %>%
+           count(from)
+count_13 <- read_letters %>%
+    filter(journal == 13) %>%
+           count(from)
+count_15 <- read_letters %>%
+    filter(journal == 15) %>%
+           count(from) 
+
+```
+```{r}
+count_1$journal <- 1
+count_2$journal <- 2
+count_3$journal <- 3
+count_4$journal <- 4
+count_5$journal <- 5
+count_6$journal <- 6
+count_9$journal <- 9
+count_12$journal <- 12
+count_13$journal <- 13
+count_15$journal <- 15
+```
+
+```{r}
+
+from_count <- dplyr::bind_rows(count_1, count_2, count_3, count_4, count_5, count_6, count_9, count_12,count_13, count_15)
+```
+
+
+```{r}
+from_count %>%
+  group_by(journal) %>%
+   filter(n > 3) %>%
+  ggplot(aes(x=from, y=n)) + 
+   geom_bar(stat = "identity")+
+   facet_wrap(vars(journal))+
+    theme(axis.text.x = element_text(angle = 60, hjust = 1))+
+   labs(y = "n", x = "Location", title = "Distribution of letters recieved across journals")
+```
