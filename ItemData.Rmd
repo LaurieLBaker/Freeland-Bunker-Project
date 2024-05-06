@@ -1,0 +1,358 @@
+---
+title: "Text Analysis Work"
+author: "Noelle & Gael"
+date: '2024-04-15'
+output: html_document
+---
+```{r}
+install.packages(c("tidyverse", 
+                   "tidytext",
+                   "stopwords",
+                   "widyr",
+                   "tidygraph",
+                   "tidylo",
+                   "ggraph",
+                   "wordcloud",
+                   "dplyr"))
+```
+
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library("magrittr") 
+library(tidyverse)
+library(tidytext)
+```
+
+
+```{r}
+library(readr)
+journal_71_72 <- read_csv("Data_Sets/journal_1871_1872 - Sheet1 (1).csv")
+journal_73 <- read_csv("Data_Sets/journal_1873 - Sheet1.csv")
+journal_74 <- read_csv("Data_Sets/journal_1874 - Sheet1.csv")
+journal_75 <- read_csv("Data_Sets/journal_1875 - Sheet1.csv")
+journal_76 <- read_csv("Data_Sets/journal_1876 - Sheet1.csv")
+journal_77 <- read_csv("Data_Sets/journal_1877 - Sheet1.csv")
+journal_80 <- read_csv("Data_Sets/journal_1880 - Sheet1.csv")
+journal_83 <- read_csv("Data_Sets/journal_1883 - Sheet1.csv")
+journal_84 <- read_csv("Data_Sets/journal_1884 - Sheet1.csv")
+journal_86 <- read_csv("Data_Sets/journal_1886 - Sheet1.csv")
+
+
+```
+
+```{r}
+journal_71_72$journal <- 1
+journal_73$journal <- 2
+journal_74$journal <- 3
+journal_75$journal <- 4
+journal_76$journal <- 5
+journal_77$journal <- 6
+
+journal_80$journal <- 9
+
+journal_83$journal <- 12
+journal_84$journal <- 13
+
+journal_86$journal <- 15
+```
+
+```{r}
+journal_71_72 <- journal_71_72 %>%
+  rename(transcription_accuracy = transcription) %>%
+  mutate(image_path = as.character(image_path)) %>%
+  mutate(image_description = as.character(image_description))
+
+journal_75 <- journal_75 %>%
+  mutate(quantity = as.character(quantity)) %>%
+  mutate(latitude = as.logical(latitude)) %>%
+  mutate(latitude_origin = as.logical(latitude_origin)) %>%
+  mutate(longitude = as.logical(longitude)) %>%
+  mutate(longitude_origin = as.logical(longitude_origin))
+
+journal_76 <- journal_76 %>%
+  mutate(quantity = as.character(quantity)) %>%
+  mutate(latitude = as.logical(latitude)) %>%
+  mutate(latitude_origin = as.logical(latitude_origin)) %>%
+  mutate(longitude = as.logical(longitude)) %>%
+  mutate(longitude_origin = as.logical(longitude_origin)) %>%
+  mutate(image_path = as.character(image_path)) %>%
+  mutate(image_description = as.character(image_description)) %>%
+  mutate(noteworthy = as.logical(noteworthy))
+
+journal_77 <- journal_77 %>%
+  mutate(quantity = as.character(quantity)) %>%
+  mutate(image_path = as.character(image_path)) %>%
+  mutate(image_description = as.character(image_description)) %>%
+  mutate(noteworthy = as.logical(noteworthy)) %>%
+  mutate(temperature_am = as.logical(temperature_am))
+
+journal_80 <- journal_80 %>%
+  mutate(image_path = as.character(image_path)) %>%
+  mutate(image_description = as.character(image_description)) %>%
+  mutate(noteworthy = as.logical(noteworthy)) %>%
+  mutate(temperature_am = as.logical(temperature_am)) %>%
+  mutate(temperature_pm = as.logical(temperature_pm)) %>%
+  mutate(temperature_night = as.logical(temperature_night))
+  
+journal_86 <- journal_86 %>%
+  mutate(image_path = as.character(image_path)) %>%
+  mutate(image_description = as.character(image_description)) %>%
+  mutate(noteworthy = as.logical(noteworthy)) %>%
+  mutate(temperature_am = as.logical(temperature_am)) %>%
+  mutate(temperature_pm = as.logical(temperature_pm)) %>%
+  mutate(temperature_night = as.logical(temperature_night)) %>%
+  mutate(latitude = as.logical(latitude)) %>%
+  mutate(recorder = as.character(recorder)) %>%
+  mutate(notes = as.character(notes)) %>%
+  select(- ...37)
+
+journal_83 <- journal_83 %>%
+  mutate(image_path = as.character(image_path)) %>%
+  mutate(image_description = as.character(image_description)) %>%
+  mutate(noteworthy = as.logical(noteworthy)) %>%
+  mutate(temperature_am = as.logical(temperature_am)) %>%
+  mutate(latitude = as.logical(latitude)) %>%
+  mutate(latitude_origin = as.logical(latitude_origin)) %>%
+  mutate(longitude_origin = as.logical(longitude_origin)) %>%
+  mutate(letter_from = as.character(letter_from))
+  
+journal_84 <- journal_84 %>%
+  mutate(image_path = as.character(image_path)) %>%
+  mutate(image_description = as.character(image_description)) %>%
+  mutate(noteworthy = as.logical(noteworthy)) %>%
+  mutate(temperature_am = as.logical(temperature_am)) %>%
+  mutate(latitude = as.logical(latitude)) %>%
+  mutate(latitude_origin = as.logical(latitude_origin)) %>%
+  mutate(letter_to = as.character(letter_to))%>%
+  mutate(notes = as.character(notes))
+```
+
+```{r}
+journals <- dplyr::bind_rows(journal_71_72, journal_73, journal_74, journal_75, journal_76, journal_77, journal_80, journal_86)
+```
+
+#Filter for most mentioned items
+```{r}
+items <- journals %>%
+  filter(item != "NA")
+```
+
+```{r}
+item_count <- items %>%
+  separate(item, c("item_1", "item_2", "item_3"), sep = ",")
+```
+```{r}
+item_1 <- item_count %>%
+  select(item_1, journal, journal_entry) %>%
+  rename(item = item_1)
+item_2 <- item_count %>%
+  select(item_2, journal, journal_entry) %>%
+  rename(item = item_2)
+item_3 <- item_count %>%
+  select(item_3, journal, journal_entry) %>%
+  rename(item = item_3)
+
+item_count <- dplyr::bind_rows(item_1, item_2, item_3)
+```
+```{r}
+item_count <- item_count %>%
+  mutate(item = str_to_title(item)) %>%
+  mutate(item = trimws(item, "both")) %>%
+  filter(item != "NA") 
+```
+
+```{r}
+item_count %>%
+    count(item, sort = TRUE)
+```
+
+```{r}
+count_1 <- item_count %>%
+    filter(journal == 1) %>%
+           count(item) 
+count_2 <- item_count %>%
+    filter(journal == 2) %>%
+           count(item) 
+count_3 <- item_count %>%
+    filter(journal == 3) %>%
+           count(item) 
+count_4 <- item_count %>%
+    filter(journal == 4) %>%
+           count(item) 
+count_5 <- item_count %>%
+    filter(journal == 5) %>%
+           count(item) 
+count_6 <- item_count %>%
+    filter(journal == 6) %>%
+           count(item) 
+count_9 <- item_count %>%
+    filter(journal == 9) %>%
+           count(item)
+count_12 <- item_count %>%
+    filter(journal == 12) %>%
+           count(item)
+count_13 <- item_count %>%
+    filter(journal == 13) %>%
+           count(item)
+count_15 <- item_count %>%
+    filter(journal == 15) %>%
+           count(item) 
+
+```
+```{r}
+count_1$journal <- 1
+count_2$journal <- 2
+count_3$journal <- 3
+count_4$journal <- 4
+count_5$journal <- 5
+count_6$journal <- 6
+count_9$journal <- 9
+count_12$journal <- 12
+count_13$journal <- 13
+count_15$journal <- 15
+```
+
+```{r}
+
+count_items <- dplyr::bind_rows(count_1, count_2, count_3, count_4, count_5, count_6, count_9,count_12,count_13, count_15)
+```
+
+
+```{r}
+count_items %>%
+  filter(n > 5) %>%
+  group_by(journal) %>%
+  ggplot(aes(x=item, y=n)) + 
+   geom_bar(stat = "identity")+
+   facet_wrap(vars(journal))+
+    theme(axis.text.x = element_text(angle = 60, hjust = 1))+
+   labs(y = "n", x = "item", title = "Distribution of items mentioned across journals")
+```
+
+## Look at words associated with journal entries mentioning different items
+#Wood
+```{r}
+library(stringr)
+
+Wood <-  dplyr::filter(item_count, grepl('Wood', item))
+
+#https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
+```
+```{r}
+(wood_words <- Wood %>%
+    unnest_tokens(word, journal_entry) %>%
+    count(journal, word, sort = TRUE) %>%
+    filter(!word %in% stop_words$word))
+```
+```{r}
+wood_tf_idf <- wood_words %>%
+    bind_tf_idf(word, journal, n) %>%
+    arrange(desc(tf_idf))
+```
+```{r}
+wood_tf_idf %>%
+#  filter(tf_idf >= 0.02) %>%
+    group_by(journal) %>%
+    slice_max(tf_idf, n = 10) %>%
+    ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = journal)) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(vars(journal), scales = "free") +
+    scale_x_continuous(expand = c(0,0)) +
+    labs(y = NULL, x = "tf-idf", title = "Highest tf-idf words in Freeland Bunker's Journal entries associated with mention of Wood")
+```
+
+#Lobster
+```{r}
+library(stringr)
+
+Lobster <-  dplyr::filter(item_count, grepl('Lobster', item))
+
+#https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
+```
+```{r}
+(lobs_words <- Lobster %>%
+    unnest_tokens(word, journal_entry) %>%
+    count(journal, word, sort = TRUE) %>%
+    filter(!word %in% stop_words$word))
+```
+```{r}
+lobs_tf_idf <- lobs_words %>%
+    bind_tf_idf(word, journal, n) %>%
+    arrange(desc(tf_idf))
+```
+```{r}
+lobs_tf_idf %>%
+#  filter(tf_idf >= 0.02) %>%
+    group_by(journal) %>%
+    slice_max(tf_idf, n = 10) %>%
+    ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = journal)) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(vars(journal), scales = "free") +
+    scale_x_continuous(expand = c(0,0)) +
+    labs(y = NULL, x = "tf-idf", title = "Highest tf-idf words in Freeland Bunker's Journal entries associated with mention of Lobster")
+```
+
+#Coal
+```{r}
+library(stringr)
+
+Coal <-  dplyr::filter(item_count, grepl('Coal', item))
+
+#https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
+```
+```{r}
+(coal_words <- Coal %>%
+    unnest_tokens(word, journal_entry) %>%
+    count(journal, word, sort = TRUE) %>%
+    filter(!word %in% stop_words$word))
+```
+```{r}
+coal_tf_idf <- coal_words %>%
+    bind_tf_idf(word, journal, n) %>%
+    arrange(desc(tf_idf))
+```
+```{r}
+coal_tf_idf %>%
+#  filter(tf_idf >= 0.02) %>%
+    group_by(journal) %>%
+    slice_max(tf_idf, n = 10) %>%
+    ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = journal)) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(vars(journal), scales = "free") +
+    scale_x_continuous(expand = c(0,0)) +
+    labs(y = NULL, x = "tf-idf", title = "Highest tf-idf words in Freeland Bunker's Journal entries associated with mention of Coal")
+```
+
+
+#Hay
+```{r}
+library(stringr)
+
+Hay <-  dplyr::filter(item_count, grepl('Hay', item))
+
+#https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
+```
+```{r}
+(hay_words <- Hay %>%
+    unnest_tokens(word, journal_entry) %>%
+    count(journal, word, sort = TRUE) %>%
+    filter(!word %in% stop_words$word))
+```
+```{r}
+hay_tf_idf <- hay_words %>%
+    bind_tf_idf(word, journal, n) %>%
+    arrange(desc(tf_idf))
+```
+```{r}
+hay_tf_idf %>%
+#  filter(tf_idf >= 0.02) %>%
+    group_by(journal) %>%
+    slice_max(tf_idf, n = 10) %>%
+    ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = journal)) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(vars(journal), scales = "free") +
+    scale_x_continuous(expand = c(0,0)) +
+    labs(y = NULL, x = "tf-idf", title = "Highest tf-idf words in Freeland Bunker's Journal entries associated with mention of Hay")
+```
