@@ -35,8 +35,9 @@ journal_75 <- read_csv("Data_Sets/journal_1875 - Sheet1.csv")
 journal_76 <- read_csv("Data_Sets/journal_1876 - Sheet1.csv")
 journal_77 <- read_csv("Data_Sets/journal_1877 - Sheet1.csv")
 journal_80 <- read_csv("Data_Sets/journal_1880 - Sheet1.csv")
+journal_83 <- read_csv("Data_Sets/journal_1883 - Sheet1.csv")
+journal_84 <- read_csv("Data_Sets/journal_1884 - Sheet1.csv")
 journal_86 <- read_csv("Data_Sets/journal_1886 - Sheet1.csv")
-View(journal_1886_Sheet1)
 
 ```
 
@@ -55,6 +56,9 @@ journal_76$journal <- 5
 journal_77$journal <- 6
 
 journal_80$journal <- 9
+
+journal_83$journal <- 12
+journal_84$journal <- 13
 
 journal_86$journal <- 15
 ```
@@ -109,7 +113,25 @@ journal_86 <- journal_86 %>%
   mutate(notes = as.character(notes)) %>%
   select(- ...37)
 
+journal_83 <- journal_83 %>%
+  mutate(image_path = as.character(image_path)) %>%
+  mutate(image_description = as.character(image_description)) %>%
+  mutate(noteworthy = as.logical(noteworthy)) %>%
+  mutate(temperature_am = as.logical(temperature_am)) %>%
+  mutate(latitude = as.logical(latitude)) %>%
+  mutate(latitude_origin = as.logical(latitude_origin)) %>%
+  mutate(longitude_origin = as.logical(longitude_origin)) %>%
+  mutate(letter_from = as.character(letter_from))
   
+journal_84 <- journal_84 %>%
+  mutate(image_path = as.character(image_path)) %>%
+  mutate(image_description = as.character(image_description)) %>%
+  mutate(noteworthy = as.logical(noteworthy)) %>%
+  mutate(temperature_am = as.logical(temperature_am)) %>%
+  mutate(latitude = as.logical(latitude)) %>%
+  mutate(latitude_origin = as.logical(latitude_origin)) %>%
+  mutate(letter_to = as.character(letter_to))%>%
+  mutate(notes = as.character(notes))
 ```
 
 
