@@ -470,4 +470,16 @@ top_from %>%
     theme(axis.text.x = element_text(angle = 60, hjust = 1))+
    labs(y = "n", x = "Location", title = "Distribution of letters recieved across journals")
 ```
+```{r}
+top_to <- dplyr::filter(to_count, grepl('C. C. Bunker|C.C. Burrill|C.c. Bunker|CC Bunker|Charles C. Bunker|Charles C Bunker|Benjamin Kittridge|Thomas Bunker|Capt. Thomas Bunker', to))
+```
 
+```{r}
+top_to %>%
+  group_by(journal) %>%
+  ggplot(aes(x=to, y=n)) + 
+   geom_bar(stat = "identity")+
+   facet_wrap(vars(journal))+
+    theme(axis.text.x = element_text(angle = 60, hjust = 1))+
+   labs(y = "n", x = "Location", title = "Distribution of letters recieved across journals")
+```
