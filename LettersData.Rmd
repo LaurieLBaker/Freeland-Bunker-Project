@@ -283,7 +283,11 @@ CB_mention <-journals %>%
     filter(!word %in% stop_words$word))
 ```
 Info Obtained:
-
+- Work with Freeland on life insurance
+- Had dinner with Freeland on occation
+- Travelled together to pospect Harbor
+- Lived in Ellsworth
+- Only mentioned visiting in 1871-1873
 
 #Thomas Bunker
 ```{r}
@@ -300,6 +304,25 @@ Tom_Bunk <- dplyr::bind_rows(Tom_Bunk, Tom_Bunk_2)
     count(journal, word, sort = TRUE) %>%
     filter(!word %in% stop_words$word))
 ```
+TB mentions outside of letters
+```{r}
+tb_mention <-journals %>%
+  filter(grepl('Thomas Bunker|Thom Bunker|thomas Bunker', journal_entry)) %>%
+  filter(letter == "no letter")
+```
+```{r}
+(tb_word_xletter <- tb_mention %>%
+  filter(letter == "no letter") %>%
+    unnest_tokens(word, journal_entry) %>%
+    count(journal, word, sort = TRUE) %>%
+    filter(!word %in% stop_words$word))
+```
+Info Obtained:
+- Lived on the Cranberry Isles
+- Freeland often visited, had meals, & stayed overnight with TB
+- Used Freeland's schooner the Sea Flower, bought from FB in 1875
+- mentioned visits from 1873-1877
+
 
 # Find distribution across journals
 
