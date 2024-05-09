@@ -156,16 +156,16 @@ read_letters <- read_letters %>%
 ```
 ```{r}
 per_1 <- read_letters %>%
-  select(person_1, journal, journal_entry) %>%
+  select(person_1, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
   rename(from = person_1)
 per_2 <- read_letters %>%
-  select(person_2, journal, journal_entry) %>%
+  select(person_2, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
   rename(from = person_2)
 per_3 <- read_letters %>%
-  select(person_3, journal, journal_entry) %>%
+  select(person_3, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
   rename(from = person_3)
 per_4 <- read_letters %>%
-  select(person_4, journal, journal_entry) %>%
+  select(person_4, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
   rename(from = person_4)
 
 read_letters <- dplyr::bind_rows(per_1, per_2, per_3, per_4)
@@ -191,16 +191,16 @@ write_letters <- write_letters %>%
 ```
 ```{r}
 per_1 <- write_letters %>%
-  select(person_1, journal, journal_entry) %>%
+  select(person_1, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
   rename(to = person_1)
 per_2 <- write_letters %>%
-  select(person_2, journal, journal_entry) %>%
+  select(person_2, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
   rename(to = person_2)
 per_3 <- write_letters %>%
-  select(person_3, journal, journal_entry) %>%
+  select(person_3, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
   rename(to = person_3)
 per_4 <- write_letters %>%
-  select(person_4, journal, journal_entry) %>%
+  select(person_4, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
   rename(to = person_4)
 
 write_letters <- dplyr::bind_rows(per_1, per_2, per_3, per_4)
@@ -510,3 +510,28 @@ top_to %>%
     theme(axis.text.x = element_text(angle = 60, hjust = 1))+
    labs(y = "n", x = "Location", title = "Distribution of letters recieved across journals")
 ```
+
+#Adding in coordinates for GIS Mapping
+```{r}
+#mapping <- c("74250" = 1, "8000" = 2, "9000" = 3)
+#data$Week_Number <- mapping[as.character(data$Process_ID)]
+
+#https://forum.posit.co/t/creating-a-new-column-based-on-another-column/109464/6
+```
+```{r}
+Top_2 <-   
+  dplyr::filter(write_letters, grepl('C. C. Burrill|C.C. Burrill|C.c. Burrill|CC Burrill|Charles C. Burrill|Charles C Burrill|Benjamin Kittridge|Thomas Bunker|Capt. Thomas Bunker', to))%>%
+  rename(person = to)
+Top_f <-
+  dplyr::filter(read_letters, grepl('C. C. Burill|C.C. Burrill|C.c. Burrill|CC Burrill|Charles C. Burrill|Charles C Burill|Benjamin Kittridge|Thomas Bunker|Capt. Thomas Bunker', from))%>%
+  rename(person = from)
+
+top <- dplyr::bind_rows(Top_2, Top_f)
+```
+```{r}
+mapping <- c("C. C. Burrill" = 1, "C.C. Burrill" = 1, "C.c. Burrill" = 1,"CC Burrill" = 1,"Charles C. Burrill" = 1,"Charles C Burill" = 1, "Benjamin Kittridge" = 2, "Thomas Bunker" = 3, "Capt. Thomas Bunker" = 3)
+
+top$latitude_to <- mapping[as.character(top$person)]
+```
+
+
