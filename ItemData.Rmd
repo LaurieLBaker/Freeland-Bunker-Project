@@ -5,15 +5,15 @@ date: '2024-04-15'
 output: html_document
 ---
 ```{r}
-install.packages(c("tidyverse", 
-                   "tidytext",
-                   "stopwords",
-                   "widyr",
-                   "tidygraph",
-                   "tidylo",
-                   "ggraph",
-                   "wordcloud",
-                   "dplyr"))
+# install.packages(c("tidyverse", 
+#                   "tidytext",
+#                   "stopwords",
+#                   "widyr",
+#                   "tidygraph",
+#                   "tidylo",
+#                   "ggraph",
+ #                  "wordcloud",
+  #                 "dplyr"))
 ```
 
 
@@ -145,14 +145,13 @@ item_count <- items %>%
 ```
 ```{r}
 item_1 <- item_count %>%
-  select(item_1, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, letter,letter_to, letter_from, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check
-         ) %>%
+  select(item_1, quantity, unit, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, letter,letter_to, letter_from, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
   rename(item = item_1)
 item_2 <- item_count %>%
-  select(item_2, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, letter,letter_to, letter_from, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
+  select(item_2, quantity, unit, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, letter,letter_to, letter_from, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
   rename(item = item_2)
 item_3 <- item_count %>%
-  select(item_3, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, letter,letter_to, letter_from, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
+  select(item_3, quantity, unit, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, letter,letter_to, letter_from, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
   rename(item = item_3)
 
 item_count <- dplyr::bind_rows(item_1, item_2, item_3)
@@ -237,7 +236,7 @@ count_items %>%
 ```{r}
 library(stringr)
 
-Wood <-  dplyr::filter(item_count, grepl('Wood|wood', item))
+Wood <-  dplyr::filter(item_count, grepl('Wood|Wood.', item))
 
 #https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
 ```
@@ -268,7 +267,7 @@ wood_tf_idf %>%
 ```{r}
 library(stringr)
 
-Lobster <-  dplyr::filter(journals, grepl('Lobster', item))
+Lobster <-  dplyr::filter(item_, grepl('Lobster', item))
 
 #https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
 ```
