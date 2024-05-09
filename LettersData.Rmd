@@ -323,6 +323,33 @@ Info Obtained:
 - Used Freeland's schooner the Sea Flower, bought from FB in 1875
 - mentioned visits from 1873-1877
 
+#J.F. Kingsley
+```{r}
+JF_King <-letters %>%
+  filter(grepl('J.F. Kingsley|J.F.K|JFK|Jfk|J F Kingsley| J. F. Kingsley', letter_from))
+JF_King_2 <-letters %>%
+  filter(grepl('J.F. Kingsley|J.F.K|JFK|Jfk|J F Kingsley| J. F. Kingsley', letter_to))
+
+JF_King <- dplyr::bind_rows(JF_King, JF_King_2)
+```
+```{r}
+(JFK_words <- JF_King %>%
+    unnest_tokens(word, journal_entry) %>%
+    count(journal, word, sort = TRUE) %>%
+    filter(!word %in% stop_words$word))
+```
+JFK mentions outside of letters
+```{r}
+jfk_mention <-journals %>%
+  filter(grepl('J.F. Kingsley|J.F.K|JFK|Jfk|J F Kingsley| J. F. Kingsley', journal_entry)) 
+```
+```{r}
+(jfk_word_xletter <- jfk_mention %>%
+    unnest_tokens(word, journal_entry) %>%
+    count(journal, word, sort = TRUE) %>%
+    filter(!word %in% stop_words$word))
+```
+
 
 # Find distribution across journals
 
