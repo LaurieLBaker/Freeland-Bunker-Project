@@ -157,35 +157,34 @@ journals <- dplyr::bind_rows(journal_71_72, journal_73, journal_74, journal_75, 
 # Figure out where Freeland goes locally most often
 ```{r}
 loc_place <- journals %>%
-  select(journal, local_place, location) %>%
   separate(local_place, c("place_1", "place_2", "place_3", "place_4"), sep = ",")
 ```
 ```{r}
 loc_1 <- loc_place %>%
-  select(place_1) %>%
+  select(place_1, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, letter_to, letter_from, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
   rename(place = place_1)
 loc_2 <- loc_place %>%
-  select(place_2) %>%
+  select(place_2, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, letter_to, letter_from, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
   rename(place = place_2)
 loc_3 <- loc_place %>%
-  select(place_3) %>%
+  select(place_3, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, letter_to, letter_from, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
   rename(place = place_3)
 loc_4 <- loc_place %>%
-  select(place_4) %>%
+  select(place_4, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, letter_to, letter_from, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
   rename(place = place_4)
 
-loc_count <- dplyr::bind_rows(loc_1, loc_2, loc_3, loc_4)
+loc_place <- dplyr::bind_rows(loc_1, loc_2, loc_3, loc_4)
 ```
 
 ```{r}
-loc_count <- loc_count %>%
+loc_place <- loc_place %>%
   mutate(place = str_to_title(place)) %>%
   mutate(place = trimws(place, "both")) #str_squish 
 
 ```
 
 ```{r}
-loc_count <- loc_count %>%
+loc_count <- loc_place %>%
     count(place, sort = TRUE)
 ```
 ```{r}
@@ -485,4 +484,43 @@ loc_count %>%
     theme(axis.text.x = element_text(angle = 60, hjust = 1))+
    labs(y = "n", x = "Location", title = "Distribution of local place mentions across journals")
 ```
+
+## Prepare data for mapping
+
+#local places
+```{r}
+place_map <-   loc_place %>%
+  filter(place == c('Home','Shop','Lodge Of Good Templars','Lodge Of The Good Templars','Hall','Wharf' ))
+
+# dplyr::filter(loc_place, grepl('Home|Shop|Lodge Of Good Templars|Lodge Of The Good Templars|Hall|Wharf', place))
+```
+```{r}
+mapping <- c("Home" = 44.39044, 
+"Shop" = 44.39078, #Double Check
+"Lodge Of Good Templars" = 0,
+"Lodge Of The Good Templars" = 0,
+"Hall" = 44.39168,
+"Wharf" = 44.38937)
+
+place_map$latitude <- mapping[as.character(place_map$place)]
+```
+```{r}
+mapping <- c("Home" = 68.09314, 
+"Shop" = 68.09316,
+"Lodge Of Good Templars" = 0,
+"Lodge Of The Good Templars" = 0,
+"Hall" = 68.09103,
+"Wharf" = 68.08918)
+
+place_map$longitude <- mapping[as.character(place_map$place)]
+```
+
+#local people
+Top mentions in local_place
+- Abner Tracy's
+- Joseph Bunker's
+- James Bourgett's
+- T. R. Hammond's House
+- N. A. Bickford's
+- Thomas H. Smallidge's (Thomas Smallidge's | Thomas Smallige's)
 
