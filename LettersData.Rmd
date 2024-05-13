@@ -529,10 +529,66 @@ Top_f <-
 top <- dplyr::bind_rows(Top_2, Top_f)
 ```
 ```{r}
-mapping <- c("C. C. Burrill" = 44.5434, "C.C. Burrill" = 44.5434, "C.c. Burrill" = 44.5434,"CC Burrill" = 44.5434,"Charles C. Burrill" = 44.5434,"Charles C Burill" = 44.5434, "Benjamin Kittridge" = 2, "Thomas Bunker" = 3, "Capt. Thomas Bunker" = 3)
+mapping <- c("Charles C. Burrill" = 44.5434, "Benjamin Kittridge" = 44.387699, "Thomas Bunker" = 44.2534, "Capt Thomas Bunker" = 44.2534, "Stephen Southard Thomas Bunker" = 44.2534)
 
 top$latitude_to <- mapping[as.character(top$person)]
 ```
 long
 cc: 68.4195
+bk: 68.212219
+tb: 68.1837
+```{r}
+mapping <- c("Charles C. Burrill" = 68.4195, "Benjamin Kittridge" = 68.212219, "Thomas Bunker" = 68.1837, "Capt Thomas Bunker" = 68.1837, "Stephen Southard Thomas Bunker" = 68.1837)
 
+top$longitude_to <- mapping[as.character(top$person)]
+```
+
+```{r}
+mapping <- c("Winter Harbor" = 44.3948,                     
+"West Gouldsboro, Winter Harbor" = 44.3948, 
+# "NA"
+"West Gouldsboro" = 44.4695,       
+"Winter Harbor, Mark Island, Winter Harbor" = 44.3948,
+"Hog Island, Jones Cove" = 44.4687,      
+# "Salem"                                    
+"Boston"  = 42.3601,                                 
+"Stave Island, Winter Harbor" = 44.3948,          
+"Prospect Harbor" = 44.4033,                       
+"Ellsworth" = 44.5434,                  
+"Bangor" = 44.8016,        
+"Winter Harbor, West Gouldsboro" = 44.3948,      
+"Winter Harbor, Turtle Isle, Winter Harbor" = 44.3948,
+"Winter Harbor, Iron Bound, Winter Harbor" = 44.3948,
+"Hancock, Petit Manan, Winter Harbor" = 44.3948, 
+"Deer Isle, Bass Harbor, Winter Harbor"  = 44.3948,  
+"Duck Islands, Winter Harbor" = 44.3948,
+"Bass Habor, Winter Harbor"= 44.3948
+# "Albany Railroad Wharf"  
+)
+top$latitude <- mapping[as.character(top$location)]
+```
+```{r}
+mapping <- c("Winter Harbor" = 68.0830,                     
+"West Gouldsboro, Winter Harbor"= 68.0830,  
+# "NA"
+"West Gouldsboro" = 68.0903,               
+"Winter Harbor, Mark Island, Winter Harbor" = 68.0830,
+"Hog Island, Jones Cove" = 68.1017,
+# "Salem"                                    
+"Boston" = 71.0589,                               
+"Stave Island, Winter Harbor" = 68.0830,           
+"Prospect Harbor" = 68.0254,                      
+"Ellsworth" = 68.4195,                   
+"Bangor" = 68.7712,                       
+"Winter Harbor, West Gouldsboro" = 68.0830,
+"Winter Harbor, Turtle Isle, Winter Harbor" = 68.0830,
+"Winter Harbor, Iron Bound, Winter Harbor" = 68.0830,
+"Hancock, Petit Manan, Winter Harbor" = 68.0830,
+"Deer Isle, Bass Harbor, Winter Harbor" = 68.0830,
+"Duck Islands, Winter Harbor" = 68.0830, 
+"Bass Habor, Winter Harbor" = 68.0830  
+# "Albany Railroad Wharf"  
+)
+
+top$longitude <- mapping[as.character(top$location)]
+```
