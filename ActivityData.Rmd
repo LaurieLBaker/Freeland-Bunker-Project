@@ -514,6 +514,11 @@ mapping <- c("Home" = 68.09314,
 
 place_map$longitude <- mapping[as.character(place_map$place)]
 ```
+```{r}
+place_map <- place_map %>%
+  filter(latitude != "NA")
+```
+
 
 #local people
 Top mentions in local_place
