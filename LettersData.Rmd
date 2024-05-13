@@ -485,7 +485,7 @@ from_count %>%
 
 
 ```{r}
-top_from <- dplyr::filter(from_count, grepl('C. C. Bunker|C.C. Burrill|C.c. Bunker|CC Bunker|Charles C. Bunker|Charles C Bunker|Benjamin Kittridge|Thomas Bunker|Capt. Thomas Bunker', from))
+top_from <- dplyr::filter(from_count, grepl('C. C. Burill|C.C. Burrill|C.c. Burrill|CC Burrill|Charles C. Burrill|Charles C Burill|Benjamin Kittridge|Thomas Bunker|Capt. Thomas Bunker|J.F. Kingsley|J.F.K|JFK|Jfk|J F Kingsley| J. F. Kingsley', from))
 ```
 
 ```{r}
@@ -498,7 +498,7 @@ top_from %>%
    labs(y = "n", x = "Location", title = "Distribution of letters recieved across journals")
 ```
 ```{r}
-top_to <- dplyr::filter(to_count, grepl('C. C. Bunker|C.C. Burrill|C.c. Bunker|CC Bunker|Charles C. Bunker|Charles C Bunker|Benjamin Kittridge|Thomas Bunker|Capt. Thomas Bunker', to))
+top_to <- dplyr::filter(to_count, grepl('C. C. Burill|C.C. Burrill|C.c. Burrill|CC Burrill|Charles C. Burrill|Charles C Burill|Benjamin Kittridge|Thomas Bunker|Capt. Thomas Bunker|J.F. Kingsley|J.F.K|JFK|Jfk|J F Kingsley| J. F. Kingsley', to))
 ```
 
 ```{r}
@@ -520,18 +520,19 @@ top_to %>%
 ```
 ```{r}
 Top_2 <-   
-  dplyr::filter(write_letters, grepl('C. C. Burrill|C.C. Burrill|C.c. Burrill|CC Burrill|Charles C. Burrill|Charles C Burrill|Benjamin Kittridge|Thomas Bunker|Capt. Thomas Bunker', to))%>%
+  dplyr::filter(write_letters, grepl('C. C. Burill|C.C. Burrill|C.c. Burrill|CC Burrill|Charles C. Burrill|Charles C Burill|Benjamin Kittridge|Thomas Bunker|Capt. Thomas Bunker|J.F. Kingsley|J.F.K|JFK|Jfk|J F Kingsley| J. F. Kingsley', to))%>%
   rename(person = to)
 Top_f <-
-  dplyr::filter(read_letters, grepl('C. C. Burill|C.C. Burrill|C.c. Burrill|CC Burrill|Charles C. Burrill|Charles C Burill|Benjamin Kittridge|Thomas Bunker|Capt. Thomas Bunker', from))%>%
+  dplyr::filter(read_letters, grepl('C. C. Burill|C.C. Burrill|C.c. Burrill|CC Burrill|Charles C. Burrill|Charles C Burill|Benjamin Kittridge|Thomas Bunker|Capt. Thomas Bunker|J.F. Kingsley|J.F.K|JFK|Jfk|J F Kingsley| J. F. Kingsley', from))%>%
   rename(person = from)
 
 top <- dplyr::bind_rows(Top_2, Top_f)
 ```
 ```{r}
-mapping <- c("C. C. Burrill" = 1, "C.C. Burrill" = 1, "C.c. Burrill" = 1,"CC Burrill" = 1,"Charles C. Burrill" = 1,"Charles C Burill" = 1, "Benjamin Kittridge" = 2, "Thomas Bunker" = 3, "Capt. Thomas Bunker" = 3)
+mapping <- c("C. C. Burrill" = 44.5434, "C.C. Burrill" = 44.5434, "C.c. Burrill" = 44.5434,"CC Burrill" = 44.5434,"Charles C. Burrill" = 44.5434,"Charles C Burill" = 44.5434, "Benjamin Kittridge" = 2, "Thomas Bunker" = 3, "Capt. Thomas Bunker" = 3)
 
 top$latitude_to <- mapping[as.character(top$person)]
 ```
-
+long
+cc: 68.4195
 
