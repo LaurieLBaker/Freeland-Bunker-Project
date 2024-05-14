@@ -5,15 +5,15 @@ date: '2024-04-15'
 output: html_document
 ---
 ```{r}
-install.packages(c("tidyverse", 
-                   "tidytext",
-                   "stopwords",
-                   "widyr",
-                   "tidygraph",
-                   "tidylo",
-                   "ggraph",
-                   "wordcloud",
-                   "dplyr"))
+#install.packages(c("tidyverse", 
+ #                  "tidytext",
+  #                 "stopwords",
+   #                "widyr",
+    #               "tidygraph",
+     #              "tidylo",
+      #             "ggraph",
+       #            "wordcloud",
+        #           "dplyr"))
 ```
 
 
@@ -538,7 +538,7 @@ cc: 68.4195
 bk: 68.212219
 tb: 68.1837
 ```{r}
-mapping <- c("Charles C. Burrill" = 68.4195, "Benjamin Kittridge" = 68.212219, "Thomas Bunker" = 68.1837, "Capt Thomas Bunker" = 68.1837, "Stephen Southard Thomas Bunker" = 68.1837)
+mapping <- c("Charles C. Burrill" = -68.4195, "Benjamin Kittridge" = -68.212219, "Thomas Bunker" = -68.1837, "Capt Thomas Bunker" = -68.1837, "Stephen Southard Thomas Bunker" = -68.1837)
 
 top$longitude_to <- mapping[as.character(top$person)]
 ```
@@ -568,25 +568,25 @@ mapping <- c("Winter Harbor" = 44.3948,
 top$latitude <- mapping[as.character(top$location)]
 ```
 ```{r}
-mapping <- c("Winter Harbor" = 68.0830,                     
-"West Gouldsboro, Winter Harbor"= 68.0830,  
+mapping <- c("Winter Harbor" = -68.0830,                     
+"West Gouldsboro, Winter Harbor"= -68.0830,  
 # "NA"
-"West Gouldsboro" = 68.0903,               
-"Winter Harbor, Mark Island, Winter Harbor" = 68.0830,
-"Hog Island, Jones Cove" = 68.1017,
+"West Gouldsboro" = -68.0903,               
+"Winter Harbor, Mark Island, Winter Harbor" = -68.0830,
+"Hog Island, Jones Cove" = -68.1017,
 # "Salem"                                    
-"Boston" = 71.0589,                               
-"Stave Island, Winter Harbor" = 68.0830,           
+"Boston" = -71.0589,                               
+"Stave Island, Winter Harbor" = -68.0830,           
 "Prospect Harbor" = 68.0254,                      
-"Ellsworth" = 68.4195,                   
-"Bangor" = 68.7712,                       
-"Winter Harbor, West Gouldsboro" = 68.0830,
-"Winter Harbor, Turtle Isle, Winter Harbor" = 68.0830,
-"Winter Harbor, Iron Bound, Winter Harbor" = 68.0830,
-"Hancock, Petit Manan, Winter Harbor" = 68.0830,
-"Deer Isle, Bass Harbor, Winter Harbor" = 68.0830,
-"Duck Islands, Winter Harbor" = 68.0830, 
-"Bass Habor, Winter Harbor" = 68.0830  
+"Ellsworth" = -68.4195,                   
+"Bangor" = -68.7712,                       
+"Winter Harbor, West Gouldsboro" = -68.0830,
+"Winter Harbor, Turtle Isle, Winter Harbor" = -68.0830,
+"Winter Harbor, Iron Bound, Winter Harbor" = -68.0830,
+"Hancock, Petit Manan, Winter Harbor" = -68.0830,
+"Deer Isle, Bass Harbor, Winter Harbor" = -68.0830,
+"Duck Islands, Winter Harbor" = -68.0830, 
+"Bass Habor, Winter Harbor" = -68.0830  
 # "Albany Railroad Wharf"  
 )
 
