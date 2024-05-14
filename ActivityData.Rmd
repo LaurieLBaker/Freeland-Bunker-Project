@@ -5,15 +5,15 @@ date: '2024-04-15'
 output: html_document
 ---
 ```{r}
-install.packages(c("tidyverse", 
-                   "tidytext",
-                   "stopwords",
-                   "widyr",
-                   "tidygraph",
-                   "tidylo",
-                   "ggraph",
-                   "wordcloud",
-                   "dplyr"))
+#install.packages(c("tidyverse", 
+#                   "tidytext",
+ #                  "stopwords",
+  #                 "widyr",
+   #                "tidygraph",
+    #               "tidylo",
+     #              "ggraph",
+      #             "wordcloud",
+       #            "dplyr"))
 ```
 
 
@@ -505,12 +505,12 @@ mapping <- c("Home" = 44.39044,
 place_map$latitude <- mapping[as.character(place_map$place)]
 ```
 ```{r}
-mapping <- c("Home" = 68.09314, 
-"Shop" = 68.09316,
+mapping <- c("Home" = -68.09314, 
+"Shop" = -68.09316,
 "Lodge Of Good Templars" = 0,
 "Lodge Of The Good Templars" = 0,
-"Hall" = 68.09103,
-"Wharf" = 68.08918)
+"Hall" = -68.09103,
+"Wharf" = -68.08918)
 
 place_map$longitude <- mapping[as.character(place_map$place)]
 ```
