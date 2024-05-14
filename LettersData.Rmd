@@ -592,3 +592,8 @@ mapping <- c("Winter Harbor" = 68.0830,
 
 top$longitude <- mapping[as.character(top$location)]
 ```
+
+```{r}
+write.csv(top, "letter.csv", row.names=FALSE)
+```
+
