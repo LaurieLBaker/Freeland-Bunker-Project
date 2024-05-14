@@ -518,6 +518,9 @@ place_map$longitude <- mapping[as.character(place_map$place)]
 place_map <- place_map %>%
   filter(latitude != "NA")
 ```
+```{r}
+write.csv(place_map, "places.csv", row.names=FALSE)
+```
 
 
 #local people
