@@ -482,10 +482,75 @@ from_count %>%
     theme(axis.text.x = element_text(angle = 60, hjust = 1))+
    labs(y = "n", x = "Location", title = "Distribution of letters recieved across journals")
 ```
+# writing & reading across journals
+```{r}
+count_1 <- letters %>%
+    filter(journal == 1) %>%
+           count(letter) 
+count_2 <- letters %>%
+    filter(journal == 2) %>%
+           count(letter) 
+count_3 <- letters %>%
+    filter(journal == 3) %>%
+           count(letter)
+count_4 <- letters %>%
+    filter(journal == 4) %>%
+           count(letter)
+count_5 <- letters %>%
+    filter(journal == 5) %>%
+           count(letter)
+count_6 <- letters %>%
+    filter(journal == 6) %>%
+           count(letter) 
+count_9 <- letters %>%
+    filter(journal == 9) %>%
+           count(letter)
+count_12 <- letters %>%
+    filter(journal == 12) %>%
+           count(letter)
+count_13 <- letters %>%
+    filter(journal == 13) %>%
+           count(letter)
+count_15 <- letters %>%
+    filter(journal == 15) %>%
+           count(letter) 
+
+```
+```{r}
+count_1$journal <- 1
+count_2$journal <- 2
+count_3$journal <- 3
+count_4$journal <- 4
+count_5$journal <- 5
+count_6$journal <- 6
+count_9$journal <- 9
+count_12$journal <- 12
+count_13$journal <- 13
+count_15$journal <- 15
+```
+
+```{r}
+
+letter_count <- dplyr::bind_rows(count_1, count_2, count_3, count_4, count_5, count_6, count_9, count_12,count_13, count_15)
+```
 
 
 ```{r}
-top_from <- dplyr::filter(from_count, grepl('C. C. Burill|C.C. Burrill|C.c. Burrill|CC Burrill|Charles C. Burrill|Charles C Burill|Benjamin Kittridge|Thomas Bunker|Capt. Thomas Bunker|J.F. Kingsley|J.F.K|JFK|Jfk|J F Kingsley| J. F. Kingsley', from))
+letter_count %>%
+  group_by(journal) %>%
+ #  filter(n > 3) %>%
+  ggplot(aes(x=letter, y=n)) + 
+   geom_bar(stat = "identity")+
+   facet_wrap(vars(journal))+
+    theme(axis.text.x = element_text(angle = 60, hjust = 1))+
+   labs(y = "n", x = "Letter mentioned", title = "Distribution of letters written/recieved across journals")
+```
+
+
+
+```{r}
+top_from <- dplyr::filter(from_count, grepl('C. C. Burill|C.C. Burrill|C.c. Burrill|CC Burrill|Charles C. Burrill|Charles C Burill|Benjamin Kittridge|Thomas Bunker|J.F. Kingsley|J.F.K|JFK|Jfk|J F Kingsley| J. F. Kingsley', from))
+
 ```
 
 ```{r}
@@ -495,7 +560,7 @@ top_from %>%
    geom_bar(stat = "identity")+
    facet_wrap(vars(journal))+
     theme(axis.text.x = element_text(angle = 60, hjust = 1))+
-   labs(y = "n", x = "Location", title = "Distribution of letters recieved across journals")
+   labs(y = "n", x = "People Receiving or Writing Letters", title = "Distribution of letters recieved across journals")
 ```
 ```{r}
 top_to <- dplyr::filter(to_count, grepl('C. C. Burill|C.C. Burrill|C.c. Burrill|CC Burrill|Charles C. Burrill|Charles C Burill|Benjamin Kittridge|Thomas Bunker|Capt. Thomas Bunker|J.F. Kingsley|J.F.K|JFK|Jfk|J F Kingsley| J. F. Kingsley', to))
