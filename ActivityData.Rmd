@@ -469,14 +469,19 @@ loc_count <- dplyr::bind_rows(loc_count_1, loc_count_2, loc_count_3, loc_count_4
 ```{r}
 #journal_71_72$journal <- 1
 ```
+```{r}
+loc_count <- loc_count %>%
+filter(place %in% c("Home", "Shop", "Hall", "Wharf"))
+
+```
 
 
 ```{r}
 loc_count %>%
   group_by(journal) %>%
  # filter(n < 500) %>%  #include home & Shop
-   filter(n < 40) %>%
-   filter(n > 19) %>%
+ #  filter(n < 40) %>%
+ #  filter(n > 5) %>%
   #  filter(word != NA) %>%
   ggplot(aes(x=place, y=n)) + 
    geom_bar(stat = "identity")+

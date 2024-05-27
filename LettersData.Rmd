@@ -563,7 +563,15 @@ top_from %>%
    labs(y = "n", x = "People Receiving or Writing Letters", title = "Distribution of letters recieved across journals")
 ```
 ```{r}
+mapping <- c("Capt. Thomas Bunker" = "Thomas Bunker", "Stephen Southard Thomas Bunker" = "Thomas Bunker", "Thomas Bunker" = "Thomas Bunker", "Charles C. Burrill" = "Charles C. Burrill",  "Benjamin Kittridge" = "Benjamin Kittridge")
+
 top_to <- dplyr::filter(to_count, grepl('C. C. Burill|C.C. Burrill|C.c. Burrill|CC Burrill|Charles C. Burrill|Charles C Burill|Benjamin Kittridge|Thomas Bunker|Capt. Thomas Bunker|J.F. Kingsley|J.F.K|JFK|Jfk|J F Kingsley| J. F. Kingsley', to))
+  
+top_to$to <- mapping[as.character(top_to$to)]
+  
+top_to <- top_to %>%  
+  filter(to != "NA")
+  
 ```
 
 ```{r}
@@ -598,10 +606,6 @@ mapping <- c("Charles C. Burrill" = 44.5434, "Benjamin Kittridge" = 44.387699, "
 
 top$latitude_to <- mapping[as.character(top$person)]
 ```
-long
-cc: 68.4195
-bk: 68.212219
-tb: 68.1837
 ```{r}
 mapping <- c("Charles C. Burrill" = -68.4195, "Benjamin Kittridge" = -68.212219, "Thomas Bunker" = -68.1837, "Capt Thomas Bunker" = -68.1837, "Stephen Southard Thomas Bunker" = -68.1837)
 

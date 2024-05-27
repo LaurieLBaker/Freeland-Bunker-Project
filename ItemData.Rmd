@@ -218,11 +218,16 @@ count_15$journal <- 15
 
 count_items <- dplyr::bind_rows(count_1, count_2, count_3, count_4, count_5, count_6, count_9,count_12,count_13, count_15)
 ```
+```{r}
+count_items <- count_items %>%
+filter(item %in% c("Wood", "Lobster", "Coal", "Hay"))
+
+```
 
 
 ```{r}
 count_items %>%
-  filter(n > 5) %>%
+#  filter(n > 5) %>%
   group_by(journal) %>%
   ggplot(aes(x=item, y=n)) + 
    geom_bar(stat = "identity")+
