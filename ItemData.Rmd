@@ -4,7 +4,7 @@ author: "Noelle & Gael"
 date: '2024-04-15'
 output: html_document
 ---
-```{r}
+```{r install-packages}
 # install.packages(c("tidyverse", 
 #                   "tidytext",
 #                   "stopwords",
@@ -17,7 +17,7 @@ output: html_document
 ```
 
 
-```{r}
+```{r read-in-packages}
 library(dplyr)
 library(tidyverse)
 library("magrittr") 
@@ -26,7 +26,7 @@ library(tidytext)
 ```
 
 
-```{r}
+```{r read-in-data}
 library(readr)
 journal_71_72 <- read_csv("Data_Sets/journal_1871_1872 - Sheet1 (1).csv")
 journal_73 <- read_csv("Data_Sets/journal_1873 - Sheet1.csv")
@@ -42,7 +42,7 @@ journal_86 <- read_csv("Data_Sets/journal_1886 - Sheet1.csv")
 
 ```
 
-```{r}
+```{r assign-new-column}
 journal_71_72$journal <- 1
 journal_73$journal <- 2
 journal_74$journal <- 3
@@ -58,7 +58,8 @@ journal_84$journal <- 13
 journal_86$journal <- 15
 ```
 
-```{r}
+```{r adjust-variable-type}
+#in order to join data sets, all the corresponding variables have to match; we glimpse() each dataset and changed variable that didn't match our first one
 journal_71_72 <- journal_71_72 %>%
   rename(transcription_accuracy = transcription) %>%
   mutate(image_path = as.character(image_path)) %>%
@@ -129,21 +130,23 @@ journal_84 <- journal_84 %>%
   mutate(notes = as.character(notes))
 ```
 
-```{r}
+```{r join-datasets}
 journals <- dplyr::bind_rows(journal_71_72, journal_73, journal_74, journal_75, journal_76, journal_77, journal_80, journal_86)
 ```
 
 #Filter for most mentioned items
-```{r}
+```{r filter-out-NA}
 items <- journals %>%
   filter(item != "NA")
 ```
 
-```{r}
+```{r separate-multiple-items}
+#sometimes multiple things are in a list in one entry of a column, we want to separate to be able to count them all individually
+
 item_count <- items %>%
   separate(item, c("item_1", "item_2", "item_3"), sep = ",")
 ```
-```{r}
+```{r reorganize-to-combine-separated-items}
 item_1 <- item_count %>%
   select(item_1, quantity, unit, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, letter,letter_to, letter_from, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
   rename(item = item_1)
@@ -156,19 +159,21 @@ item_3 <- item_count %>%
 
 item_count <- dplyr::bind_rows(item_1, item_2, item_3)
 ```
-```{r}
+```{r standardize-formatting}
 item_count <- item_count %>%
   mutate(item = str_to_title(item)) %>%
   mutate(item = trimws(item, "both")) %>%
   filter(item != "NA") 
 ```
 
-```{r}
+```{r count-items}
 item_count %>%
     count(item, sort = TRUE)
 ```
 
-```{r}
+
+#Find distributions of when items are mentioned across journals
+```{r count-and-filter-each-journal}
 count_1 <- item_count %>%
     filter(journal == 1) %>%
            count(item) 
@@ -201,7 +206,7 @@ count_15 <- item_count %>%
            count(item) 
 
 ```
-```{r}
+```{r assign-new-column}
 count_1$journal <- 1
 count_2$journal <- 2
 count_3$journal <- 3
@@ -214,18 +219,17 @@ count_13$journal <- 13
 count_15$journal <- 15
 ```
 
-```{r}
+```{r join-data}
 
 count_items <- dplyr::bind_rows(count_1, count_2, count_3, count_4, count_5, count_6, count_9,count_12,count_13, count_15)
 ```
-```{r}
+```{r filter-for-top-items}
 count_items <- count_items %>%
 filter(item %in% c("Wood", "Lobster", "Coal", "Hay"))
 
 ```
 
-
-```{r}
+```{r bar-chart-item-distribution}
 count_items %>%
 #  filter(n > 5) %>%
   group_by(journal) %>%
@@ -237,26 +241,27 @@ count_items %>%
 ```
 
 ## Look at words associated with journal entries mentioning different items
+
 #Wood
-```{r}
+```{r filter-for-wood}
 library(stringr)
 
 Wood <-  dplyr::filter(item_count, grepl('Wood|Wood.', item))
 
 #https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
 ```
-```{r}
+```{r separate-out-words-in-entries}
 (wood_words <- Wood %>%
     unnest_tokens(word, journal_entry) %>%
     count(journal, word, sort = TRUE) %>%
     filter(!word %in% stop_words$word))
 ```
-```{r}
+```{r find-tfidf}
 wood_tf_idf <- wood_words %>%
     bind_tf_idf(word, journal, n) %>%
     arrange(desc(tf_idf))
 ```
-```{r}
+```{r plot-tfidf}
 wood_tf_idf %>%
 #  filter(tf_idf >= 0.02) %>%
     group_by(journal) %>%
@@ -269,25 +274,25 @@ wood_tf_idf %>%
 ```
 
 #Lobster
-```{r}
+```{r filter-for-lobster}
 library(stringr)
 
 Lobster <-  dplyr::filter(item_, grepl('Lobster', item))
 
 #https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
 ```
-```{r}
+```{r separate-out-words-in-entries}
 (lobs_words <- Lobster %>%
     unnest_tokens(word, journal_entry) %>%
     count(journal, word, sort = TRUE) %>%
     filter(!word %in% stop_words$word))
 ```
-```{r}
+```{r find-tfidf}
 lobs_tf_idf <- lobs_words %>%
     bind_tf_idf(word, journal, n) %>%
     arrange(desc(tf_idf))
 ```
-```{r}
+```{r plot-tfidf}
 lobs_tf_idf %>%
 #  filter(tf_idf >= 0.02) %>%
     group_by(journal) %>%
@@ -300,25 +305,25 @@ lobs_tf_idf %>%
 ```
 
 #Coal
-```{r}
+```{r filter-for-coal}
 library(stringr)
 
 Coal <-  dplyr::filter(item_count, grepl('Coal', item))
 
 #https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
 ```
-```{r}
+```{r separate-out-words-in-entries}
 (coal_words <- Coal %>%
     unnest_tokens(word, journal_entry) %>%
     count(journal, word, sort = TRUE) %>%
     filter(!word %in% stop_words$word))
 ```
-```{r}
+```{r find-tfidf}
 coal_tf_idf <- coal_words %>%
     bind_tf_idf(word, journal, n) %>%
     arrange(desc(tf_idf))
 ```
-```{r}
+```{r plot-tfidf}
 coal_tf_idf %>%
 #  filter(tf_idf >= 0.02) %>%
     group_by(journal) %>%
@@ -332,25 +337,25 @@ coal_tf_idf %>%
 
 
 #Hay
-```{r}
+```{r filter-for-hay}
 library(stringr)
 
 Hay <-  dplyr::filter(item_count, grepl('Hay', item))
 
 #https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
 ```
-```{r}
+```{r separate-out-words-in-entries}
 (hay_words <- Hay %>%
     unnest_tokens(word, journal_entry) %>%
     count(journal, word, sort = TRUE) %>%
     filter(!word %in% stop_words$word))
 ```
-```{r}
+```{r find-tfidf}
 hay_tf_idf <- hay_words %>%
     bind_tf_idf(word, journal, n) %>%
     arrange(desc(tf_idf))
 ```
-```{r}
+```{r plot-tfidf}
 hay_tf_idf %>%
 #  filter(tf_idf >= 0.02) %>%
     group_by(journal) %>%

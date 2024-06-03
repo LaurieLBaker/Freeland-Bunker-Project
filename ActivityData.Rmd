@@ -144,6 +144,8 @@ journals <- dplyr::bind_rows(journal_71_72, journal_73, journal_74, journal_75, 
 
 # Figure out where Freeland goes locally most often
 ```{r separate-for-multiple-places}
+#sometimes multiple things are in a list in one entry of a column, we want to separate to be able to count them all individually
+
 loc_place <- journals %>%
   separate(local_place, c("place_1", "place_2", "place_3", "place_4"), sep = ",")
 ```
