@@ -1,10 +1,10 @@
 ---
-title: "Text Analysis Work"
+title: "Text Analysis Work for letters"
 author: "Noelle & Gael"
 date: '2024-04-15'
 output: html_document
 ---
-```{r}
+```{r install-packages}
 #install.packages(c("tidyverse", 
  #                  "tidytext",
   #                 "stopwords",
@@ -17,7 +17,7 @@ output: html_document
 ```
 
 
-```{r}
+```{r read-in-packages}
 library(dplyr)
 library(tidyverse)
 library("magrittr") 
@@ -26,7 +26,7 @@ library(tidytext)
 ```
 
 
-```{r}
+```{r  read-in-data}
 library(readr)
 journal_71_72 <- read_csv("Data_Sets/journal_1871_1872 - Sheet1 (1).csv")
 journal_73 <- read_csv("Data_Sets/journal_1873 - Sheet1.csv")
@@ -41,7 +41,8 @@ journal_86 <- read_csv("Data_Sets/journal_1886 - Sheet1.csv")
 
 ```
 
-```{r}
+```{r assign-new-column}
+#assign a new column in each dataset to correspond with what journal each entry is from
 journal_71_72$journal <- 1
 journal_73$journal <- 2
 journal_74$journal <- 3
@@ -57,7 +58,8 @@ journal_84$journal <- 13
 journal_86$journal <- 15
 ```
 
-```{r}
+```{r adjust-variable-type}
+#in order to join data sets, all the corresponding variables have to match; we glimpse() each dataset and changed variable that didn't match our first one
 journal_71_72 <- journal_71_72 %>%
   rename(transcription_accuracy = transcription) %>%
   mutate(image_path = as.character(image_path)) %>%
@@ -128,33 +130,39 @@ journal_84 <- journal_84 %>%
   mutate(notes = as.character(notes))
 ```
 
-```{r}
+```{r join-datasets}
 journals <- dplyr::bind_rows(journal_71_72, journal_73, journal_74, journal_75, journal_76, journal_77, journal_80, journal_86)
 ```
 
 
-```{r}
+#Create new dataframe for letters
+
+```{r filter-out-no-letter-entries}
 letters <- journals %>%
   filter(letter != "no letter")
 ```
 
-```{r}
+```{r filter-for-read-letters}
 read_letters <- letters %>%
   filter(letter_from != "NA")
   
 ```
-```{r}
+```{r filter-for-written-letters}
 write_letters <- letters %>%
   filter(letter_to != "NA")
 ```
 
+
 # Count people Freeland most often recived letters from
 
-```{r}
+```{r separate-for-multiple-people}
+#sometimes multiple things are in a list in one entry of a column, we want to separate to be able to count them all individually
+
 read_letters <- read_letters %>%
   separate(letter_from, c("person_1", "person_2", "person_3", "person_4"), sep = ",")
 ```
-```{r}
+
+```{r reorganize-to-combine-separated-people}
 per_1 <- read_letters %>%
   select(person_1, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
   rename(from = person_1)
@@ -170,26 +178,28 @@ per_4 <- read_letters %>%
 
 read_letters <- dplyr::bind_rows(per_1, per_2, per_3, per_4)
 ```
-```{r}
+```{r standardize-formatting}
 read_letters <- read_letters %>%
   mutate(from = str_to_title(from)) %>%
   mutate(from = trimws(from, "both")) %>%
   filter(from != "NA")
 ```
 
-```{r}
+```{r count-read-letters}
 (read_count <- read_letters %>%
    filter(from!= "NA") %>%
     count(from, sort = TRUE))
 ```
 
+
 # Count people Freeland most often wrote letters to
 
-```{r}
+```{r separate-for-multiple-people}
 write_letters <- write_letters %>%
   separate(letter_to, c("person_1", "person_2", "person_3", "person_4"), sep = ",")
 ```
-```{r}
+
+```{r reorganize-to-combine-separated-people}
 per_1 <- write_letters %>%
   select(person_1, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
   rename(to = person_1)
@@ -205,7 +215,7 @@ per_4 <- write_letters %>%
 
 write_letters <- dplyr::bind_rows(per_1, per_2, per_3, per_4)
 ```
-```{r}
+```{r standardize-formatting}
 write_letters <- write_letters %>%
   mutate(to = str_to_title(to)) %>%
   mutate(to = trimws(to, "both")) %>%
@@ -213,7 +223,7 @@ write_letters <- write_letters %>%
 ```
 
 
-```{r}
+```{r count-written-letters}
 (write_count <- write_letters %>%
    filter(to != "NA") %>%
     count(to, sort = TRUE))
@@ -221,7 +231,9 @@ write_letters <- write_letters %>%
 ```
 
 #Info on idividuals
-```{r}
+We picked top five letter writers/recievers & read any journal entry that mentioned them.
+
+```{r filter-for-Kittridge}
 ben_kitt <-letters %>%
   filter(grepl('Benjamin Kittridge|benjamin kittridge', letter_from))
 ben_kitt_2 <-letters %>%
@@ -229,19 +241,19 @@ ben_kitt_2 <-letters %>%
 
 ben_kitt <- dplyr::bind_rows(ben_kitt, ben_kitt_2)
 ```
-```{r}
+```{r find-words-mentioned-most-with-Kittridge}
 (BK_words <- ben_kitt %>%
     unnest_tokens(word, journal_entry) %>%
     count(journal, word, sort = TRUE) %>%
     filter(!word %in% stop_words$word))
 ```
 Bk mentions outside of letters
-```{r}
+```{r filter-for-Kittridge}
 bk_mention <-journals %>%
   filter(grepl('Benj. Kittridge|Benjamin Kittredge|Kittredge', journal_entry)) %>%
   filter(letter == "no letter")
 ```
-```{r}
+```{r find-words-mentioned-most-with-Kittridge}
 (bk_word_xletter <- bk_mention %>%
   filter(letter == "no letter") %>%
     unnest_tokens(word, journal_entry) %>%
@@ -255,7 +267,7 @@ Info Obtained:
 - Only visited in 1873
 
 #CC Burrill
-```{r}
+```{r filter-for-Burrill}
 CC_Burr <-letters %>%
   filter(grepl('Charles C. Burrill|C. C. Burrill', letter_from))
 CC_Burr_2 <-letters %>%
@@ -263,19 +275,19 @@ CC_Burr_2 <-letters %>%
 
 CC_Burr <- dplyr::bind_rows(CC_Burr, CC_Burr_2)
 ```
-```{r}
+```{r find-words-mentioned-most-with-Burrill}
 (CC_words <- CC_Burr %>%
     unnest_tokens(word, journal_entry) %>%
     count(journal, word, sort = TRUE) %>%
     filter(!word %in% stop_words$word))
 ```
 CB mentions outside of letters
-```{r}
+```{r filter-for-Burrill}
 CB_mention <-journals %>%
   filter(grepl('CC Burrill|C.C. Burrill|C. C. Burrill|C C Burrill| Charles C. Burrill| Charles C Burrill|Chas. C. Burrill', journal_entry)) %>%
   filter(letter == "no letter")
 ```
-```{r}
+```{r find-words-mentioned-most-with-Burrill}
 (cb_word_xletter <- CB_mention %>%
   filter(letter == "no letter") %>%
     unnest_tokens(word, journal_entry) %>%
@@ -290,7 +302,7 @@ Info Obtained:
 - Only mentioned visiting in 1871-1873
 
 #Thomas Bunker
-```{r}
+```{r filter-for-Bunker}
 Tom_Bunk <-letters %>%
   filter(grepl('Thomas Bunker', letter_from))
 Tom_Bunk_2 <-letters %>%
@@ -298,19 +310,19 @@ Tom_Bunk_2 <-letters %>%
 
 Tom_Bunk <- dplyr::bind_rows(Tom_Bunk, Tom_Bunk_2)
 ```
-```{r}
+```{r find-words-mentioned-most-with-Bunker}
 (TB_words <- Tom_Bunk %>%
     unnest_tokens(word, journal_entry) %>%
     count(journal, word, sort = TRUE) %>%
     filter(!word %in% stop_words$word))
 ```
 TB mentions outside of letters
-```{r}
+```{r filter-for-Bunker}
 tb_mention <-journals %>%
   filter(grepl('Thomas Bunker|Thom Bunker|thomas Bunker', journal_entry)) %>%
   filter(letter == "no letter")
 ```
-```{r}
+```{r find-words-mentioned-most-with-Bunker}
 (tb_word_xletter <- tb_mention %>%
   filter(letter == "no letter") %>%
     unnest_tokens(word, journal_entry) %>%
@@ -324,7 +336,8 @@ Info Obtained:
 - mentioned visits from 1873-1877
 
 #J.F. Kingsley
-```{r}
+not a top letter person, but mentioned elsewhere
+```{r filter-for-kingsley}
 JF_King <-letters %>%
   filter(grepl('J.F. Kingsley|J.F.K|JFK|Jfk|J F Kingsley| J. F. Kingsley', letter_from))
 JF_King_2 <-letters %>%
@@ -332,18 +345,18 @@ JF_King_2 <-letters %>%
 
 JF_King <- dplyr::bind_rows(JF_King, JF_King_2)
 ```
-```{r}
+```{r find-words-mentioned-most-with-Kingsley}
 (JFK_words <- JF_King %>%
     unnest_tokens(word, journal_entry) %>%
     count(journal, word, sort = TRUE) %>%
     filter(!word %in% stop_words$word))
 ```
 JFK mentions outside of letters
-```{r}
+```{r filter-for-kingsley}
 jfk_mention <-journals %>%
   filter(grepl('J.F. Kingsley|J.F.K|JFK|Jfk|J F Kingsley| J. F. Kingsley', journal_entry)) 
 ```
-```{r}
+```{r find-words-mentioned-most-with-Kingsley}
 (jfk_word_xletter <- jfk_mention %>%
     unnest_tokens(word, journal_entry) %>%
     count(journal, word, sort = TRUE) %>%
@@ -351,11 +364,11 @@ jfk_mention <-journals %>%
 ```
 
 
-# Find distribution across journals
+# Find distribution of people read/wrote letters across journals
 
 #Wrote
 
-```{r}
+```{r filter-journals-and-count}
 count_1 <- write_letters %>%
     filter(journal == 1) %>%
            count(to) 
@@ -388,7 +401,7 @@ count_15 <- write_letters %>%
            count(to) 
 
 ```
-```{r}
+```{r assign-new-column}
 count_1$journal <- 1
 count_2$journal <- 2
 count_3$journal <- 3
@@ -401,13 +414,13 @@ count_13$journal <- 13
 count_15$journal <- 15
 ```
 
-```{r}
+```{r join-data}
 
 to_count <- dplyr::bind_rows(count_1, count_2, count_3, count_4, count_5, count_6, count_9, count_12,count_13, count_15)
 ```
 
 
-```{r}
+```{r bar-chart-distribution-of-letters}
 to_count %>%
   group_by(journal) %>%
    filter(n > 3) %>%
@@ -420,7 +433,7 @@ to_count %>%
 
 #Read
 
-```{r}
+```{r filter-journals-and-count}
 count_1 <- read_letters %>%
     filter(journal == 1) %>%
            count(from) 
@@ -453,7 +466,7 @@ count_15 <- read_letters %>%
            count(from) 
 
 ```
-```{r}
+```{r assign-new-column}
 count_1$journal <- 1
 count_2$journal <- 2
 count_3$journal <- 3
@@ -466,13 +479,13 @@ count_13$journal <- 13
 count_15$journal <- 15
 ```
 
-```{r}
+```{r join-data}
 
 from_count <- dplyr::bind_rows(count_1, count_2, count_3, count_4, count_5, count_6, count_9, count_12,count_13, count_15)
 ```
 
 
-```{r}
+```{r bar-chart-distribution-of-letters}
 from_count %>%
   group_by(journal) %>%
    filter(n > 3) %>%
@@ -482,8 +495,9 @@ from_count %>%
     theme(axis.text.x = element_text(angle = 60, hjust = 1))+
    labs(y = "n", x = "Location", title = "Distribution of letters recieved across journals")
 ```
+
 # writing & reading across journals
-```{r}
+```{r filter-journals-and-count}
 count_1 <- letters %>%
     filter(journal == 1) %>%
            count(letter) 
@@ -516,7 +530,7 @@ count_15 <- letters %>%
            count(letter) 
 
 ```
-```{r}
+```{r assign-new-column}
 count_1$journal <- 1
 count_2$journal <- 2
 count_3$journal <- 3
@@ -529,13 +543,13 @@ count_13$journal <- 13
 count_15$journal <- 15
 ```
 
-```{r}
+```{r join-data}
 
 letter_count <- dplyr::bind_rows(count_1, count_2, count_3, count_4, count_5, count_6, count_9, count_12,count_13, count_15)
 ```
 
 
-```{r}
+```{r bar-chart-distribution-of-letters}
 letter_count %>%
   group_by(journal) %>%
  #  filter(n > 3) %>%
@@ -547,13 +561,13 @@ letter_count %>%
 ```
 
 
-
-```{r}
+#distribution of top people
+```{r filter-for-top-people}
 top_from <- dplyr::filter(from_count, grepl('C. C. Burill|C.C. Burrill|C.c. Burrill|CC Burrill|Charles C. Burrill|Charles C Burill|Benjamin Kittridge|Thomas Bunker|J.F. Kingsley|J.F.K|JFK|Jfk|J F Kingsley| J. F. Kingsley', from))
 
 ```
 
-```{r}
+```{r bar-chart-distribution-of-letters}
 top_from %>%
   group_by(journal) %>%
   ggplot(aes(x=from, y=n)) + 
@@ -562,7 +576,9 @@ top_from %>%
     theme(axis.text.x = element_text(angle = 60, hjust = 1))+
    labs(y = "n", x = "People Receiving or Writing Letters", title = "Distribution of letters recieved across journals")
 ```
-```{r}
+
+
+```{r make-name-variation-all-the-same}
 mapping <- c("Capt. Thomas Bunker" = "Thomas Bunker", "Stephen Southard Thomas Bunker" = "Thomas Bunker", "Thomas Bunker" = "Thomas Bunker", "Charles C. Burrill" = "Charles C. Burrill",  "Benjamin Kittridge" = "Benjamin Kittridge")
 
 top_to <- dplyr::filter(to_count, grepl('C. C. Burill|C.C. Burrill|C.c. Burrill|CC Burrill|Charles C. Burrill|Charles C Burill|Benjamin Kittridge|Thomas Bunker|Capt. Thomas Bunker|J.F. Kingsley|J.F.K|JFK|Jfk|J F Kingsley| J. F. Kingsley', to))
@@ -574,7 +590,7 @@ top_to <- top_to %>%
   
 ```
 
-```{r}
+```{r bar-chart-distribution-of-letters}
 top_to %>%
   group_by(journal) %>%
   ggplot(aes(x=to, y=n)) + 
@@ -584,14 +600,12 @@ top_to %>%
    labs(y = "n", x = "Location", title = "Distribution of letters recieved across journals")
 ```
 
-#Adding in coordinates for GIS Mapping
-```{r}
-#mapping <- c("74250" = 1, "8000" = 2, "9000" = 3)
-#data$Week_Number <- mapping[as.character(data$Process_ID)]
+##Adding in coordinates for GIS Mapping
 
+#where reciever was
+```{r create-mapping-dataset}
 #https://forum.posit.co/t/creating-a-new-column-based-on-another-column/109464/6
-```
-```{r}
+
 Top_2 <-   
   dplyr::filter(write_letters, grepl('C. C. Burill|C.C. Burrill|C.c. Burrill|CC Burrill|Charles C. Burrill|Charles C Burill|Benjamin Kittridge|Thomas Bunker|Capt. Thomas Bunker|J.F. Kingsley|J.F.K|JFK|Jfk|J F Kingsley| J. F. Kingsley', to))%>%
   rename(person = to)
@@ -601,18 +615,19 @@ Top_f <-
 
 top <- dplyr::bind_rows(Top_2, Top_f)
 ```
-```{r}
+```{r assign-latitude}
 mapping <- c("Charles C. Burrill" = 44.5434, "Benjamin Kittridge" = 44.387699, "Thomas Bunker" = 44.2534, "Capt Thomas Bunker" = 44.2534, "Stephen Southard Thomas Bunker" = 44.2534)
 
 top$latitude_to <- mapping[as.character(top$person)]
 ```
-```{r}
+```{r assign-longitude}
 mapping <- c("Charles C. Burrill" = -68.4195, "Benjamin Kittridge" = -68.212219, "Thomas Bunker" = -68.1837, "Capt Thomas Bunker" = -68.1837, "Stephen Southard Thomas Bunker" = -68.1837)
 
 top$longitude_to <- mapping[as.character(top$person)]
 ```
 
-```{r}
+#where Freeland was
+```{r assign-latitude}
 mapping <- c("Winter Harbor" = 44.3948,                     
 "West Gouldsboro, Winter Harbor" = 44.3948, 
 # "NA"
@@ -636,7 +651,7 @@ mapping <- c("Winter Harbor" = 44.3948,
 )
 top$latitude <- mapping[as.character(top$location)]
 ```
-```{r}
+```{r assign-longitude}
 mapping <- c("Winter Harbor" = -68.0830,                     
 "West Gouldsboro, Winter Harbor"= -68.0830,  
 # "NA"
@@ -662,7 +677,7 @@ mapping <- c("Winter Harbor" = -68.0830,
 top$longitude <- mapping[as.character(top$location)]
 ```
 
-```{r}
+```{r export-data}
 write.csv(top, "letter.csv", row.names=FALSE)
 ```
 
