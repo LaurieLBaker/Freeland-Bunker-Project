@@ -1,23 +1,27 @@
 ---
-title: "Text Analysis Work"
+title: "Text Analysis Work - Activities"
 author: "Noelle & Gael"
 date: '2024-04-15'
 output: html_document
 ---
-```{r}
-#install.packages(c("tidyverse", 
-#                   "tidytext",
- #                  "stopwords",
-  #                 "widyr",
-   #                "tidygraph",
-    #               "tidylo",
-     #              "ggraph",
-      #             "wordcloud",
-       #            "dplyr"))
+
+# Prepare Data for Working
+
+```{r install-packages}
+
+install.packages(c("tidyverse", 
+                   "tidytext",
+                   "stopwords",
+                   "widyr",
+                   "tidygraph",
+                   "tidylo",
+                   "ggraph",
+                   "wordcloud",
+                   "dplyr"))
 ```
 
 
-```{r}
+```{r read-in-packages}
 library(dplyr)
 library(tidyverse)
 library("magrittr") 
@@ -26,7 +30,7 @@ library(tidytext)
 ```
 
 
-```{r}
+```{r read-in-data}
 library(readr)
 journal_71_72 <- read_csv("Data_Sets/journal_1871_1872 - Sheet1 (1).csv")
 journal_73 <- read_csv("Data_Sets/journal_1873 - Sheet1.csv")
@@ -42,13 +46,8 @@ journal_86 <- read_csv("Data_Sets/journal_1886 - Sheet1.csv")
 
 ```
 
-```{r}
-#journals <- list.files(path = "Data_Sets/...", pattern = "*.csv", full.names = TRUE) %>% 
-#  map_df(~read_csv(.x) %>% mutate(quantity = as.character(quantity))) #%>%
-#  type_convert()
-```
-
-```{r}
+```{r assign-new-column}
+#assign a new column in each dataset to correspond with what journal each entry is from
 journal_71_72$journal <- 1
 journal_73$journal <- 2
 journal_74$journal <- 3
@@ -64,7 +63,9 @@ journal_84$journal <- 13
 journal_86$journal <- 15
 ```
 
-```{r}
+```{r adjust-variable-type}
+#in order to join data sets, all the corresponding variables have to match; we glimpse() each dataset and changed variable that didn't match our first one
+
 journal_71_72 <- journal_71_72 %>%
   rename(transcription_accuracy = transcription) %>%
   mutate(image_path = as.character(image_path)) %>%
@@ -135,31 +136,18 @@ journal_84 <- journal_84 %>%
   mutate(notes = as.character(notes))  
 ```
 
-
-
-```{r}
-#journal_71_72 <-  journal_71_72 %>% mutate(across(.fns = as.character)) %>% type_convert()
-#journal_73 <-  journal_73 %>% mutate(across(.fns = as.character)) %>% type_convert()
-#journal_74 <-  journal_74 %>% mutate(across(.fns = as.character)) %>% type_convert()
-#journal_75 <-  journal_75 %>% mutate(across(.fns = as.character)) %>% type_convert()
-#journal_76 <-  journal_76 %>% mutate(across(.fns = as.character)) %>% type_convert()
-#journal_77 <-  journal_77 %>% mutate(across(.fns = as.character)) %>% type_convert()
-#journal_80 <-  journal_80 %>% mutate(across(.fns = as.character)) %>% type_convert()
-#journal_86 <-  journal_86 %>% mutate(across(.fns = as.character)) %>% type_convert()
-```
-
-```{r}
+```{r join-datasets}
 journals <- dplyr::bind_rows(journal_71_72, journal_73, journal_74, journal_75, journal_76, journal_77, journal_80, journal_86)
 ```
 
 
 
 # Figure out where Freeland goes locally most often
-```{r}
+```{r separate-for-multiple-places}
 loc_place <- journals %>%
   separate(local_place, c("place_1", "place_2", "place_3", "place_4"), sep = ",")
 ```
-```{r}
+```{r reorganize-to-combine-separated-places}
 loc_1 <- loc_place %>%
   select(place_1, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, letter_to, letter_from, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
   rename(place = place_1)
@@ -176,24 +164,22 @@ loc_4 <- loc_place %>%
 loc_place <- dplyr::bind_rows(loc_1, loc_2, loc_3, loc_4)
 ```
 
-```{r}
+```{r standardize-formatting}
 loc_place <- loc_place %>%
   mutate(place = str_to_title(place)) %>%
   mutate(place = trimws(place, "both")) #str_squish 
 
 ```
 
-```{r}
+```{r count-places}
 loc_count <- loc_place %>%
     count(place, sort = TRUE)
 ```
-```{r}
+```{r print-place-count}
 print(loc_count)
 ```
 
-
-
-```{r}
+```{r create-bar-chart-for-places}
 loc_count %>%
     filter(n > 30) %>%
     filter(n < 2000) %>% #2000 to get rid of NA (may change)
@@ -205,25 +191,25 @@ loc_count %>%
 
 
 # Frequent words in association with Home
-```{r}
+```{r filter-for-home}
 library(stringr)
 
 Home <-  dplyr::filter(journals, grepl('Home| home| Home', local_place))
 
 #https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
 ```
-```{r}
+```{r separate-out-words-in-entries}
 (journal_words <- Home %>%
     unnest_tokens(word, journal_entry) %>%
     count(journal, word, sort = TRUE) %>%
     filter(!word %in% stop_words$word))
 ```
-```{r}
+```{r find-tfidf}
 journal_tf_idf <- journal_words %>%
     bind_tf_idf(word, journal, n) %>%
     arrange(desc(tf_idf))
 ```
-```{r}
+```{r plot-tfidf}
 journal_tf_idf %>%
 #  filter(tf_idf >= 0.02) %>%
     group_by(journal) %>%
@@ -236,25 +222,25 @@ journal_tf_idf %>%
 ```
 
 # Frequent words in association with the Lodge of Good Templars
-```{r}
+```{r filter-for-lodge}
 library(stringr)
 
 LoGT <-  dplyr::filter(journals, grepl('Lodge of Good Templars| Lodge of Good Templars| Lodge of  Good Templars|	Lodge of the Good Templars', local_place))
 
 #https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
 ```
-```{r}
+```{r separate-out-words-in-entries}
 (journal_words <- LoGT %>%
     unnest_tokens(word, journal_entry) %>%
     count(journal, word, sort = TRUE) %>%
     filter(!word %in% stop_words$word))
 ```
-```{r}
+```{r find-tfidf}
 journal_tf_idf <- journal_words %>%
     bind_tf_idf(word, journal, n) %>%
     arrange(desc(tf_idf))
 ```
-```{r}
+```{r plot-tfidf}
 journal_tf_idf %>%
   filter(tf_idf >= 0.02) %>%
     group_by(journal) %>%
@@ -268,25 +254,25 @@ journal_tf_idf %>%
 
 
 # Frequent words in association with Hall
-```{r}
+```{r filter-for-Hall}
 library(stringr)
 
 Hall <-  dplyr::filter(journals, grepl('Hall|Hall | Hall| hall', local_place))
 
 #https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
 ```
-```{r}
+```{r separate-out-words-in-entries}
 (journal_words <- Hall %>%
     unnest_tokens(word, journal_entry) %>%
     count(journal, word, sort = TRUE) %>%
     filter(!word %in% stop_words$word))
 ```
-```{r}
+```{r find-tfidf}
 journal_tf_idf <- journal_words %>%
     bind_tf_idf(word, journal, n) %>%
     arrange(desc(tf_idf))
 ```
-```{r}
+```{r plot-tfidf}
 journal_tf_idf %>%
   filter(tf_idf >= 0.02) %>%
     group_by(journal) %>%
@@ -299,23 +285,23 @@ journal_tf_idf %>%
 ```
 
 # Frequent words in association with Shop
-```{r}
+```{r filter-for-Shop}
 Shop <-  dplyr::filter(journals, grepl('Shop|Shop | Shop| shop', local_place))
 
 #https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
 ```
-```{r}
+```{r separate-out-words-in-entries}
 (journal_words <- Shop %>%
     unnest_tokens(word, journal_entry) %>%
     count(journal, word, sort = TRUE) %>%
     filter(!word %in% stop_words$word))
 ```
-```{r}
+```{r find-tfidf}
 journal_tf_idf <- journal_words %>%
     bind_tf_idf(word, journal, n) %>%
     arrange(desc(tf_idf))
 ```
-```{r}
+```{r plot-tfidf}
 journal_tf_idf %>%
   filter(tf_idf >= 0.02) %>%
     group_by(journal) %>%
@@ -328,23 +314,23 @@ journal_tf_idf %>%
 ```
 
 # Frequent words in association with Wharf
-```{r}
+```{r filter-for-Wharf}
 Wharf <-  dplyr::filter(journals, grepl('Wharf|Wharf | Wharf| wharf', local_place))
 
 #https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
 ```
-```{r}
+```{r separate-out-words-in-entries}
 (journal_words <- Wharf %>%
     unnest_tokens(word, journal_entry) %>%
     count(journal, word, sort = TRUE) %>%
     filter(!word %in% stop_words$word))
 ```
-```{r}
+```{r find-tfidf}
 journal_tf_idf <- journal_words %>%
     bind_tf_idf(word, journal, n) %>%
     arrange(desc(tf_idf))
 ```
-```{r}
+```{r plot-tfidf}
 journal_tf_idf %>%
   filter(tf_idf >= 0.02) %>%
     group_by(journal) %>%
@@ -356,41 +342,14 @@ journal_tf_idf %>%
     labs(y = NULL, x = "tf-idf", title = "Highest tf-idf words in Freeland Bunker's Journal entries associated with mention of being at The Wharf")
 ```
 
-# Frequent words in association with Leghorn Hospital
-```{r}
-Hospital <-  dplyr::filter(journals, grepl('Leghorn Hospital|Leghorn Hospital | Leghorn Hospital| Leghorn hospital| leghorn hospital', local_place))
 
-#https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
-```
-```{r}
-(journal_words <- Hospital %>%
-    unnest_tokens(word, journal_entry) %>%
-    count(journal, word, sort = TRUE) %>%
-    filter(!word %in% stop_words$word))
-```
-```{r}
-journal_tf_idf <- journal_words %>%
-    bind_tf_idf(word, journal, n) %>%
-    arrange(desc(tf_idf))
-```
-```{r}
-journal_tf_idf %>%
-#  filter(tf_idf >= 0.02) %>%
-    group_by(journal) %>%
-    slice_max(tf_idf, n = 10) %>%
-    ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = journal)) +
-    geom_col(show.legend = FALSE) +
-    facet_wrap(vars(journal), scales = "free") +
-    scale_x_continuous(expand = c(0,0)) +
-    labs(y = NULL, x = "tf-idf", title = "Highest tf-idf words in Freeland Bunker's Journal entries associated with mention of being at The Leghorn Hospital")
-```
-# Distribution of place mentions across journals
-```{r}
+# Distribution of local place mentions across journals
+```{r separate-multiple-places}
 loc_place <- journals %>%
   select(journal, local_place, location) %>%
   separate(local_place, c("place_1", "place_2", "place_3", "place_4"), sep = ",")
 ```
-```{r}
+```{r reorganize-to-combine-separated-places}
 loc_1 <- loc_place %>%
   select(place_1, journal) %>%
   rename(place = place_1)
@@ -407,14 +366,14 @@ loc_4 <- loc_place %>%
 loc_count <- dplyr::bind_rows(loc_1, loc_2, loc_3, loc_4)
 ```
 
-```{r}
+```{r standardize-formatting}
 loc_count <- loc_count %>%
   mutate(place = str_to_title(place)) %>%
-  mutate(place = trimws(place, "both")) #str_squish 
+  mutate(place = trimws(place, "both"))  
 
 ```
 
-```{r}
+```{r count-and-filter-each-journal}
 loc_count_1 <- loc_count %>%
     filter(journal == 1) %>%
            count(place) 
@@ -447,7 +406,7 @@ loc_count_15 <- loc_count %>%
            count(place) 
 
 ```
-```{r}
+```{r assign-new-column}
 loc_count_1$journal <- 1
 loc_count_2$journal <- 2
 loc_count_3$journal <- 3
@@ -460,23 +419,18 @@ loc_count_13$journal <- 13
 loc_count_15$journal <- 15
 ```
 
-```{r}
+```{r rejoin-data}
 
 loc_count <- dplyr::bind_rows(loc_count_1, loc_count_2, loc_count_3, loc_count_4, loc_count_5, loc_count_6, loc_count_9, loc_count_12,loc_count_13, loc_count_15)
 ```
 
-
-```{r}
-#journal_71_72$journal <- 1
-```
-```{r}
+```{r filter-for-top-places}
 loc_count <- loc_count %>%
 filter(place %in% c("Home", "Shop", "Hall", "Wharf"))
 
 ```
 
-
-```{r}
+```{r bar-chart-for-place-distribution}
 loc_count %>%
   group_by(journal) %>%
  # filter(n < 500) %>%  #include home & Shop
@@ -491,15 +445,16 @@ loc_count %>%
 ```
 
 ## Prepare data for mapping
+Add in latitude and longitude
 
 #local places
-```{r}
+```{r create-mapping-data-set}
 place_map <-   loc_place %>%
   filter(place == c('Home','Shop','Lodge Of Good Templars','Lodge Of The Good Templars','Hall','Wharf' ))
 
 # dplyr::filter(loc_place, grepl('Home|Shop|Lodge Of Good Templars|Lodge Of The Good Templars|Hall|Wharf', place))
 ```
-```{r}
+```{r assign-latitudes}
 mapping <- c("Home" = 44.39044, 
 "Shop" = 44.39078, #Double Check
 "Lodge Of Good Templars" = 0,
@@ -509,7 +464,7 @@ mapping <- c("Home" = 44.39044,
 
 place_map$latitude <- mapping[as.character(place_map$place)]
 ```
-```{r}
+```{r assign-longitude}
 mapping <- c("Home" = -68.09314, 
 "Shop" = -68.09316,
 "Lodge Of Good Templars" = 0,
@@ -519,17 +474,17 @@ mapping <- c("Home" = -68.09314,
 
 place_map$longitude <- mapping[as.character(place_map$place)]
 ```
-```{r}
+```{r get-rid-of-NA}
 place_map <- place_map %>%
   filter(latitude != "NA")
 ```
-```{r}
+```{r export-dataset}
 write.csv(place_map, "places.csv", row.names=FALSE)
 ```
 
 
 #local people
-Top mentions in local_place
+Top mentions of Freeland visiting People's homes in local_place
 - Abner Tracy's
 - Joseph Bunker's
 - James Bourgett's
