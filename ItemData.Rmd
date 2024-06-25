@@ -13,32 +13,39 @@ output: html_document
 #                   "tidylo",
 #                   "ggraph",
  #                  "wordcloud",
-  #                 "dplyr"))
+  #                 "dplyr", "googlesheets4"))
 ```
 
 
 ```{r read-in-packages}
 library(dplyr)
 library(tidyverse)
-library("magrittr") 
+library(magrittr) 
 library(tidyverse)
 library(tidytext)
+library(googlesheets4)
 ```
 
 
 ```{r read-in-data}
-library(readr)
-journal_71_72 <- read_csv("Data_Sets/journal_1871_1872 - Sheet1 (1).csv")
-journal_73 <- read_csv("Data_Sets/journal_1873 - Sheet1.csv")
-journal_74 <- read_csv("Data_Sets/journal_1874 - Sheet1.csv")
-journal_75 <- read_csv("Data_Sets/journal_1875 - Sheet1.csv")
-journal_76 <- read_csv("Data_Sets/journal_1876 - Sheet1.csv")
-journal_77 <- read_csv("Data_Sets/journal_1877 - Sheet1.csv")
-journal_80 <- read_csv("Data_Sets/journal_1880 - Sheet1.csv")
-journal_83 <- read_csv("Data_Sets/journal_1883 - Sheet1.csv")
-journal_84 <- read_csv("Data_Sets/journal_1884 - Sheet1.csv")
-journal_86 <- read_csv("Data_Sets/journal_1886 - Sheet1.csv")
 
+journal_71_72 <- read_sheet('https://docs.google.com/spreadsheets/d/1f3buvhuRprNvo_2a4TwjgN-Qez0NkLk6d2VBjhsVt5Y/edit?gid=0#gid=0')
+journal_73 <- read_sheet('https://docs.google.com/spreadsheets/d/1GwncgtXAYXHKhhLlVi5hquwziiKPLk5DrKGlVX0KVA4/edit?gid=0#gid=0')
+journal_74 <- read_sheet('https://docs.google.com/spreadsheets/d/1H-5XqEJOe0adljtb1tQwFKlQ77EEnFWwwzRmvmKwaeE/edit?gid=0#gid=0')
+journal_75 <- read_sheet('https://docs.google.com/spreadsheets/d/1Y4fyBjSQfj_lXfmh161NozzQeTnvmMJjNxYBVqCNLEk/edit?gid=0#gid=0')
+journal_76 <- read_sheet('https://docs.google.com/spreadsheets/d/1Cw_DZuzm2ouQrNKZiO3s9Xhp5a1S7wnnxYqudWVDmJ8/edit?gid=0#gid=0')
+journal_77 <- read_sheet('https://docs.google.com/spreadsheets/d/1u4BYkD_wH6A8bRELL6peXUDM_p3Zfpbd_O2E--zcLto/edit?gid=0#gid=0')
+journal_78 <- read_sheet('https://docs.google.com/spreadsheets/d/1kY3BVQAYhlaqtyqcqxXBiA_DCzW_GarF_mzZjyO3CP8/edit?gid=0#gid=0')
+journal_79 <- read_sheet('https://docs.google.com/spreadsheets/d/1wKwbIAqf-44KsPcjwrfIlrucUTyAKlZIceZ1lJch4dY/edit?gid=0#gid=0')
+journal_80 <- read_sheet('https://docs.google.com/spreadsheets/d/1iBaOKU5jTTZAqm-CdQzyjtLIk5nhtHLzocvZoD6VK6w/edit?gid=0#gid=0')
+journal_81 <- read_sheet('https://docs.google.com/spreadsheets/d/1avR2jpBmNMLxeVWhGfAZqhCCFbOnbN4gcst4VkSLuKI/edit?gid=0#gid=0')
+journal_82 <- read_sheet('https://docs.google.com/spreadsheets/d/1o4Yi4DNQvdWRcq_d8cYzp9CP_4KKy-9g63FOp8bDBp8/edit?gid=0#gid=0')
+journal_83 <- read_sheet('https://docs.google.com/spreadsheets/d/1FVyX19rUMigwXRorfFgxocT5tPOEqIAWgbt1gwjZbv0/edit?gid=0#gid=0')
+journal_84 <- read_sheet('https://docs.google.com/spreadsheets/d/1EDmiVyAiORba3rm00NI3cxMCJWZGDhJyC2SKpxx9I_Y/edit?gid=0#gid=0')
+journal_85 <- read_sheet('https://docs.google.com/spreadsheets/d/1JBFWlfNKH8T1b6BgstqWtIzQJtIv8WX-RL2rVSdrrPQ/edit?gid=0#gid=0')
+journal_86 <- read_sheet('https://docs.google.com/spreadsheets/d/1FGM7h5C-JEg4QdxWTLT-qQMk_F9ssqMHM7NACaEd6D0/edit?gid=0#gid=0')
+journal_87 <- read_sheet('https://docs.google.com/spreadsheets/d/1L1wsbbxKNIUEXlqUZVBIHzbgGH9wWbyp0RvFrgODG68/edit?gid=0#gid=0')
+journal_88 <- read_sheet('https://docs.google.com/spreadsheets/d/1LS9045UxtPU-wtjX0kqZTG0Cwd0MlWKXm5Je-QbZR-A/edit?gid=0#gid=0')
 
 ```
 
@@ -49,12 +56,14 @@ journal_74$journal <- 3
 journal_75$journal <- 4
 journal_76$journal <- 5
 journal_77$journal <- 6
-
+journal_78$journal <- 7
+journal_79$journal <- 8
 journal_80$journal <- 9
-
+journal_81$journal <- 10
+journal_82$journal <- 11
 journal_83$journal <- 12
 journal_84$journal <- 13
-
+journal_85$journal <- 14
 journal_86$journal <- 15
 ```
 
@@ -63,168 +72,252 @@ journal_86$journal <- 15
 journal_71_72 <- journal_71_72 %>%
   rename(transcription_accuracy = transcription) %>%
   mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description))
+  mutate(image_description = as.character(image_description)) %>%
+  mutate(latitude = as.numeric(as.character(latitude))) %>%
+  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+  mutate(quantity = as.character(quantity)) 
+
+journal_73 <- journal_73 %>%
+  mutate(image_path = as.character(image_path)) %>%
+  mutate(image_description = as.character(image_description)) %>%
+  mutate(latitude = as.numeric(as.character(latitude))) %>%
+  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+  mutate(quantity = as.character(quantity)) 
+
+journal_74 <- journal_74 %>%
+  mutate(image_path = as.character(image_path)) %>%
+  mutate(image_description = as.character(image_description)) %>%
+  mutate(latitude = as.numeric(as.character(latitude))) %>%
+  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+  mutate(quantity = as.character(quantity)) 
+
 
 journal_75 <- journal_75 %>%
   mutate(quantity = as.character(quantity)) %>%
-  mutate(latitude = as.logical(latitude)) %>%
-  mutate(latitude_origin = as.logical(latitude_origin)) %>%
-  mutate(longitude = as.logical(longitude)) %>%
-  mutate(longitude_origin = as.logical(longitude_origin))
+  mutate(latitude_origin = as.character(latitude_origin)) %>%
+  mutate(longitude_origin = as.character(longitude_origin)) %>%
+  mutate(latitude = as.numeric(as.character(latitude))) %>%
+  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+  mutate(quantity = as.character(quantity)) 
 
 journal_76 <- journal_76 %>%
   mutate(quantity = as.character(quantity)) %>%
-  mutate(latitude = as.logical(latitude)) %>%
-  mutate(latitude_origin = as.logical(latitude_origin)) %>%
-  mutate(longitude = as.logical(longitude)) %>%
-  mutate(longitude_origin = as.logical(longitude_origin)) %>%
+  mutate(latitude_origin = as.character(latitude_origin)) %>%
+  mutate(longitude_origin = as.character(longitude_origin)) %>%
   mutate(image_path = as.character(image_path)) %>%
   mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.logical(noteworthy))
+  mutate(noteworthy = as.character(noteworthy)) %>%
+  mutate(latitude = as.numeric(as.character(latitude))) %>%
+  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+  mutate(quantity = as.character(quantity)) 
 
 journal_77 <- journal_77 %>%
   mutate(quantity = as.character(quantity)) %>%
   mutate(image_path = as.character(image_path)) %>%
   mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.logical(noteworthy)) %>%
-  mutate(temperature_am = as.logical(temperature_am))
+  mutate(noteworthy = as.character(noteworthy)) %>%
+  mutate(temperature_am = as.character(temperature_am)) %>%
+  mutate(temperature_pm = as.character(temperature_pm)) %>%
+  mutate(temperature_night = as.character(temperature_night)) %>%
+  mutate(latitude = as.numeric(as.character(latitude))) %>%
+  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+  mutate(quantity = as.character(quantity)) 
+
+journal_78 <- journal_78 %>%
+  mutate(quantity = as.character(quantity)) %>%
+  mutate(image_path = as.character(image_path)) %>%
+  mutate(image_description = as.character(image_description)) %>%
+  mutate(noteworthy = as.character(noteworthy)) %>%
+  mutate(temperature_am = as.character(temperature_am)) %>%
+  mutate(temperature_pm = as.character(temperature_pm)) %>%
+  mutate(temperature_night = as.character(temperature_night)) %>%
+  mutate(latitude = as.numeric(as.character(latitude))) %>%
+  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+  mutate(quantity = as.character(quantity)) 
+
+journal_79 <- journal_79 %>%
+  mutate(quantity = as.character(quantity)) %>%
+  mutate(image_path = as.character(image_path)) %>%
+  mutate(image_description = as.character(image_description)) %>%
+  mutate(noteworthy = as.character(noteworthy)) %>%
+  mutate(temperature_am = as.character(temperature_am)) %>%
+  mutate(temperature_pm = as.character(temperature_pm)) %>%
+  mutate(temperature_night = as.character(temperature_night)) %>%
+  mutate(latitude = as.numeric(as.character(latitude))) %>%
+  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+  mutate(quantity = as.character(quantity)) 
 
 journal_80 <- journal_80 %>%
   mutate(image_path = as.character(image_path)) %>%
   mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.logical(noteworthy)) %>%
-  mutate(temperature_am = as.logical(temperature_am)) %>%
-  mutate(temperature_pm = as.logical(temperature_pm)) %>%
-  mutate(temperature_night = as.logical(temperature_night))
-  
-journal_86 <- journal_86 %>%
+  mutate(noteworthy = as.character(noteworthy)) %>%
+  mutate(temperature_am = as.character(temperature_am)) %>%
+  mutate(temperature_pm = as.character(temperature_pm)) %>%
+  mutate(temperature_night = as.character(temperature_night)) %>%
+  mutate(latitude = as.numeric(as.character(latitude))) %>%
+  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+  mutate(quantity = as.character(quantity)) 
+
+journal_81 <- journal_81 %>%
   mutate(image_path = as.character(image_path)) %>%
   mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.logical(noteworthy)) %>%
-  mutate(temperature_am = as.logical(temperature_am)) %>%
-  mutate(temperature_pm = as.logical(temperature_pm)) %>%
-  mutate(temperature_night = as.logical(temperature_night)) %>%
-  mutate(latitude = as.logical(latitude)) %>%
-  mutate(recorder = as.character(recorder)) %>%
+  mutate(noteworthy = as.character(noteworthy)) %>%
+  mutate(temperature_am = as.character(temperature_am)) %>%
+  mutate(temperature_pm = as.character(temperature_pm)) %>%
+  mutate(temperature_night = as.character(temperature_night)) %>%
+  mutate(latitude_origin = as.character(latitude_origin)) %>%
+  mutate(letter_to = as.character(letter_to)) %>%
   mutate(notes = as.character(notes)) %>%
-  select(- ...37)
+  mutate(latitude = as.numeric(as.character(latitude))) %>%
+  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+  mutate(quantity = as.character(quantity)) 
+
+journal_82 <- journal_82 %>%
+  mutate(image_path = as.character(image_path)) %>%
+  mutate(image_description = as.character(image_description)) %>%
+  mutate(noteworthy = as.character(noteworthy)) %>%
+  mutate(temperature_am = as.character(temperature_am)) %>%
+  mutate(temperature_pm = as.character(temperature_pm)) %>%
+  mutate(temperature_night = as.character(temperature_night)) %>%
+  mutate(latitude_origin = as.character(latitude_origin)) %>%
+  mutate(letter_to = as.character(letter_to))%>%
+  mutate(notes = as.character(notes)) %>%
+  mutate(latitude = as.numeric(as.character(latitude))) %>%
+  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+  mutate(quantity = as.character(quantity)) 
 
 journal_83 <- journal_83 %>%
   mutate(image_path = as.character(image_path)) %>%
   mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.logical(noteworthy)) %>%
-  mutate(temperature_am = as.logical(temperature_am)) %>%
-  mutate(latitude = as.logical(latitude)) %>%
-  mutate(latitude_origin = as.logical(latitude_origin)) %>%
-  mutate(longitude_origin = as.logical(longitude_origin)) %>%
-  mutate(letter_from = as.character(letter_from))
+  mutate(noteworthy = as.character(noteworthy)) %>%
+  mutate(temperature_am = as.character(temperature_am)) %>%
+  mutate(temperature_pm = as.character(temperature_pm)) %>%
+  mutate(temperature_night = as.character(temperature_night)) %>%
+  mutate(latitude_origin = as.character(latitude_origin)) %>%
+  mutate(longitude_origin = as.character(longitude_origin)) %>%
+  mutate(letter_from = as.character(letter_from)) %>%
+  mutate(latitude = as.numeric(as.character(latitude))) %>%
+  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+  mutate(quantity = as.character(quantity)) 
   
 journal_84 <- journal_84 %>%
   mutate(image_path = as.character(image_path)) %>%
   mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.logical(noteworthy)) %>%
-  mutate(temperature_am = as.logical(temperature_am)) %>%
-  mutate(latitude = as.logical(latitude)) %>%
-  mutate(latitude_origin = as.logical(latitude_origin)) %>%
-  mutate(letter_to = as.character(letter_to))%>%
-  mutate(notes = as.character(notes))
+  mutate(noteworthy = as.character(noteworthy)) %>%
+  mutate(temperature_am = as.character(temperature_am)) %>%
+  mutate(temperature_pm = as.character(temperature_pm)) %>%
+  mutate(temperature_night = as.character(temperature_night)) %>%
+  mutate(latitude_origin = as.character(latitude_origin)) %>%
+  mutate(letter_to = as.character(letter_to)) %>%
+  mutate(notes = as.character(notes)) %>%
+  mutate(latitude = as.numeric(as.character(latitude))) %>%
+  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+  mutate(quantity = as.character(quantity)) 
+
+journal_85 <- journal_85 %>%
+  mutate(image_path = as.character(image_path)) %>%
+  mutate(image_description = as.character(image_description)) %>%
+  mutate(noteworthy = as.character(noteworthy)) %>%
+  mutate(temperature_am = as.character(temperature_am)) %>%
+  mutate(temperature_pm = as.character(temperature_pm)) %>%
+  mutate(temperature_night = as.character(temperature_night)) %>%
+  mutate(weather_condition_night = as.character(weather_condition_night)) %>%
+  mutate(latitude_origin = as.character(latitude_origin)) %>%
+  mutate(letter_to = as.character(letter_to)) %>%
+  mutate(notes = as.character(notes)) %>%
+  mutate(latitude = as.numeric(as.character(latitude))) %>%
+  mutate(longitude = as.numeric(as.character(longitude))) %>%
+  mutate(quantity = as.character(quantity)) 
+
+journal_86 <- journal_86 %>%
+  mutate(image_path = as.character(image_path)) %>%
+  mutate(image_description = as.character(image_description)) %>%
+  mutate(noteworthy = as.character(noteworthy)) %>%
+  mutate(temperature_am = as.character(temperature_am)) %>%
+  mutate(temperature_pm = as.character(temperature_pm)) %>%
+  mutate(temperature_night = as.character(temperature_night)) %>%
+  mutate(recorder = as.character(recorder)) %>%
+  mutate(notes = as.character(notes)) %>%
+  select(- ...37) %>%
+  mutate(latitude = as.numeric(as.character(latitude))) %>%
+  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+  mutate(quantity = as.character(quantity)) 
+
+
 ```
 
 ```{r join-datasets}
-journals <- dplyr::bind_rows(journal_71_72, journal_73, journal_74, journal_75, journal_76, journal_77, journal_80, journal_86)
+journals <- dplyr::bind_rows(journal_71_72, journal_73, journal_74, journal_75, journal_76, journal_77, journal_78, journal_79, journal_80, journal_81, journal_82, journal_83, journal_84, journal_85, journal_86)
 ```
 
-#Filter for most mentioned items
+# Filter for most mentioned items
+
 ```{r filter-out-NA}
 items <- journals %>%
-  filter(item != "NA")
+  drop_na(item)
 ```
 
 ```{r separate-multiple-items}
 #sometimes multiple things are in a list in one entry of a column, we want to separate to be able to count them all individually
 
 item_count <- items %>%
-  separate(item, c("item_1", "item_2", "item_3"), sep = ",")
+  separate_longer_delim(item, delim = ",")
 ```
-```{r reorganize-to-combine-separated-items}
-item_1 <- item_count %>%
-  select(item_1, quantity, unit, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, letter,letter_to, letter_from, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
-  rename(item = item_1)
-item_2 <- item_count %>%
-  select(item_2, quantity, unit, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, letter,letter_to, letter_from, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
-  rename(item = item_2)
-item_3 <- item_count %>%
-  select(item_3, quantity, unit, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, letter,letter_to, letter_from, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
-  rename(item = item_3)
 
-item_count <- dplyr::bind_rows(item_1, item_2, item_3)
-```
 ```{r standardize-formatting}
 item_count <- item_count %>%
+  drop_na(item) %>%
   mutate(item = str_to_title(item)) %>%
-  mutate(item = trimws(item, "both")) %>%
-  filter(item != "NA") 
+  mutate(item = trimws(item, "both"))
+
 ```
 
 ```{r count-items}
+item_count <- item_count %>%
+    filter(!item %in% c("Na")) 
+
 item_count %>%
     count(item, sort = TRUE)
+
 ```
 
 
-#Find distributions of when items are mentioned across journals
+# Find distributions of when items are mentioned across journals
+
 ```{r count-and-filter-each-journal}
-count_1 <- item_count %>%
-    filter(journal == 1) %>%
-           count(item) 
-count_2 <- item_count %>%
-    filter(journal == 2) %>%
-           count(item) 
-count_3 <- item_count %>%
-    filter(journal == 3) %>%
-           count(item) 
-count_4 <- item_count %>%
-    filter(journal == 4) %>%
-           count(item) 
-count_5 <- item_count %>%
-    filter(journal == 5) %>%
-           count(item) 
-count_6 <- item_count %>%
-    filter(journal == 6) %>%
-           count(item) 
-count_9 <- item_count %>%
-    filter(journal == 9) %>%
-           count(item)
-count_12 <- item_count %>%
-    filter(journal == 12) %>%
-           count(item)
-count_13 <- item_count %>%
-    filter(journal == 13) %>%
-           count(item)
-count_15 <- item_count %>%
-    filter(journal == 15) %>%
-           count(item) 
 
-```
-```{r assign-new-column}
-count_1$journal <- 1
-count_2$journal <- 2
-count_3$journal <- 3
-count_4$journal <- 4
-count_5$journal <- 5
-count_6$journal <- 6
-count_9$journal <- 9
-count_12$journal <- 12
-count_13$journal <- 13
-count_15$journal <- 15
+item_journal_month_count <- item_count %>%
+  mutate(month = month(date_mdy),
+         week_day = wday(date_mdy, label = TRUE)) %>%
+  group_by(journal, item, month) %>%
+  summarize(count = n())
+
+item_journal_wday_count <- item_count %>%
+  mutate(month = month(date_mdy),
+         week_day = wday(date_mdy, label = TRUE),
+         week_day_num = wday(date_mdy),
+         year = year(date_mdy)) %>%
+  group_by(journal, item, week_day, year) %>%
+  summarize(count = n())
+
+item_journal_count <- item_count %>%
+  group_by(journal) %>%
+  count(item) %>%
+  arrange(journal, desc(n))
+  
 ```
 
-```{r join-data}
-
-count_items <- dplyr::bind_rows(count_1, count_2, count_3, count_4, count_5, count_6, count_9,count_12,count_13, count_15)
+```{r}
+item_journal_count %>%
+  filter(item %in% c("Wood", "Lobster", "Coal", "Bark", "Fish")) %>%
+  ggplot(aes(x = journal, y = n, color = item, group = item)) +
+  geom_line() +
+  geom_point()
 ```
+
+
 ```{r filter-for-top-items}
-count_items <- count_items %>%
+count_items <- item_journal_count %>%
 filter(item %in% c("Wood", "Lobster", "Coal", "Hay"))
 
 ```
@@ -242,19 +335,21 @@ count_items %>%
 
 ## Look at words associated with journal entries mentioning different items
 
-#Wood
+# Wood
 ```{r filter-for-wood}
 library(stringr)
 
-Wood <-  dplyr::filter(item_count, grepl('Wood|Wood.', item))
+Wood <-  journals %>%
+  filter(str_detect(journal_entry, pattern = "Wood|wood"))
 
-#https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
 ```
+
+
 ```{r separate-out-words-in-entries}
 (wood_words <- Wood %>%
     unnest_tokens(word, journal_entry) %>%
     count(journal, word, sort = TRUE) %>%
-    filter(!word %in% stop_words$word))
+    filter(!word %in% c(stop_words$word, "wind", "thermometer", "degrees", "west")))
 ```
 ```{r find-tfidf}
 wood_tf_idf <- wood_words %>%
