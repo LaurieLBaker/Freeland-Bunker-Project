@@ -1,9 +1,10 @@
 ---
-title: "Text Analysis Work"
-author: "Noelle & Gael"
-date: '2024-04-15'
+title: "Journals Dataset Preparation"
+author: "Laurie Baker"
+date: "2024-06-25"
 output: html_document
 ---
+
 ```{r install-packages}
 # install.packages(c("tidyverse", 
 #                   "tidytext",
@@ -13,7 +14,9 @@ output: html_document
 #                   "tidylo",
 #                   "ggraph",
  #                  "wordcloud",
-  #                 "dplyr", "googlesheets4"))
+  #                 "dplyr", 
+# "googlesheets4", 
+#"gargle"))
 ```
 
 
@@ -24,10 +27,16 @@ library(magrittr)
 library(tidyverse)
 library(tidytext)
 library(googlesheets4)
+library(gargle)
+library(googledrive)
 ```
 
 
 ```{r read-in-data}
+
+# Either specify the user:
+drive_auth(email = "lbaker@coa.edu",
+           scopes = "drive.readonly")
 
 journal_71_72 <- read_sheet('https://docs.google.com/spreadsheets/d/1f3buvhuRprNvo_2a4TwjgN-Qez0NkLk6d2VBjhsVt5Y/edit?gid=0#gid=0')
 journal_73 <- read_sheet('https://docs.google.com/spreadsheets/d/1GwncgtXAYXHKhhLlVi5hquwziiKPLk5DrKGlVX0KVA4/edit?gid=0#gid=0')
@@ -250,214 +259,7 @@ journal_86 <- journal_86 %>%
 journals <- dplyr::bind_rows(journal_71_72, journal_73, journal_74, journal_75, journal_76, journal_77, journal_78, journal_79, journal_80, journal_81, journal_82, journal_83, journal_84, journal_85, journal_86)
 ```
 
-# Filter for most mentioned items
-
-```{r filter-out-NA}
-items <- journals %>%
-  drop_na(item)
+```{r write file}
+write_csv(journals, file = "../data/journals.csv")
 ```
 
-```{r separate-multiple-items}
-#sometimes multiple things are in a list in one entry of a column, we want to separate to be able to count them all individually
-
-item_count <- items %>%
-  separate_longer_delim(item, delim = ",")
-```
-
-```{r standardize-formatting}
-item_count <- item_count %>%
-  drop_na(item) %>%
-  mutate(item = str_to_title(item)) %>%
-  mutate(item = trimws(item, "both"))
-
-```
-
-```{r count-items}
-item_count <- item_count %>%
-    filter(!item %in% c("Na")) 
-
-item_count %>%
-    count(item, sort = TRUE)
-
-```
-
-
-# Find distributions of when items are mentioned across journals
-
-```{r count-and-filter-each-journal}
-
-item_journal_month_count <- item_count %>%
-  mutate(month = month(date_mdy),
-         week_day = wday(date_mdy, label = TRUE)) %>%
-  group_by(journal, item, month) %>%
-  summarize(count = n())
-
-item_journal_wday_count <- item_count %>%
-  mutate(month = month(date_mdy),
-         week_day = wday(date_mdy, label = TRUE),
-         week_day_num = wday(date_mdy),
-         year = year(date_mdy)) %>%
-  group_by(journal, item, week_day, year) %>%
-  summarize(count = n())
-
-item_journal_count <- item_count %>%
-  group_by(journal) %>%
-  count(item) %>%
-  arrange(journal, desc(n))
-  
-```
-
-```{r}
-item_journal_count %>%
-  filter(item %in% c("Wood", "Lobster", "Coal", "Bark", "Fish")) %>%
-  ggplot(aes(x = journal, y = n, color = item, group = item)) +
-  geom_line() +
-  geom_point()
-```
-
-
-```{r filter-for-top-items}
-count_items <- item_journal_count %>%
-filter(item %in% c("Wood", "Lobster", "Coal", "Hay"))
-
-```
-
-```{r bar-chart-item-distribution}
-count_items %>%
-#  filter(n > 5) %>%
-  group_by(journal) %>%
-  ggplot(aes(x=item, y=n)) + 
-   geom_bar(stat = "identity")+
-   facet_wrap(vars(journal))+
-    theme(axis.text.x = element_text(angle = 60, hjust = 1))+
-   labs(y = "n", x = "item", title = "Distribution of items mentioned across journals")
-```
-
-## Look at words associated with journal entries mentioning different items
-
-# Wood
-```{r filter-for-wood}
-library(stringr)
-
-Wood <-  journals %>%
-  filter(str_detect(journal_entry, pattern = "Wood|wood"))
-
-```
-
-
-```{r separate-out-words-in-entries}
-(wood_words <- Wood %>%
-    unnest_tokens(word, journal_entry) %>%
-    count(journal, word, sort = TRUE) %>%
-    filter(!word %in% c(stop_words$word, "wind", "thermometer", "degrees", "west")))
-```
-```{r find-tfidf}
-wood_tf_idf <- wood_words %>%
-    bind_tf_idf(word, journal, n) %>%
-    arrange(desc(tf_idf))
-```
-```{r plot-tfidf}
-wood_tf_idf %>%
-#  filter(tf_idf >= 0.02) %>%
-    group_by(journal) %>%
-    slice_max(tf_idf, n = 10) %>%
-    ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = journal)) +
-    geom_col(show.legend = FALSE) +
-    facet_wrap(vars(journal), scales = "free") +
-    scale_x_continuous(expand = c(0,0)) +
-    labs(y = NULL, x = "tf-idf", title = "Highest tf-idf words in Freeland Bunker's Journal entries associated with mention of Wood")
-```
-
-#Lobster
-```{r filter-for-lobster}
-library(stringr)
-
-Lobster <-  dplyr::filter(item_, grepl('Lobster', item))
-
-#https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
-```
-```{r separate-out-words-in-entries}
-(lobs_words <- Lobster %>%
-    unnest_tokens(word, journal_entry) %>%
-    count(journal, word, sort = TRUE) %>%
-    filter(!word %in% stop_words$word))
-```
-```{r find-tfidf}
-lobs_tf_idf <- lobs_words %>%
-    bind_tf_idf(word, journal, n) %>%
-    arrange(desc(tf_idf))
-```
-```{r plot-tfidf}
-lobs_tf_idf %>%
-#  filter(tf_idf >= 0.02) %>%
-    group_by(journal) %>%
-    slice_max(tf_idf, n = 10) %>%
-    ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = journal)) +
-    geom_col(show.legend = FALSE) +
-    facet_wrap(vars(journal), scales = "free") +
-    scale_x_continuous(expand = c(0,0)) +
-    labs(y = NULL, x = "tf-idf", title = "Highest tf-idf words in Freeland Bunker's Journal entries associated with mention of Lobster")
-```
-
-#Coal
-```{r filter-for-coal}
-library(stringr)
-
-Coal <-  dplyr::filter(item_count, grepl('Coal', item))
-
-#https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
-```
-```{r separate-out-words-in-entries}
-(coal_words <- Coal %>%
-    unnest_tokens(word, journal_entry) %>%
-    count(journal, word, sort = TRUE) %>%
-    filter(!word %in% stop_words$word))
-```
-```{r find-tfidf}
-coal_tf_idf <- coal_words %>%
-    bind_tf_idf(word, journal, n) %>%
-    arrange(desc(tf_idf))
-```
-```{r plot-tfidf}
-coal_tf_idf %>%
-#  filter(tf_idf >= 0.02) %>%
-    group_by(journal) %>%
-    slice_max(tf_idf, n = 10) %>%
-    ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = journal)) +
-    geom_col(show.legend = FALSE) +
-    facet_wrap(vars(journal), scales = "free") +
-    scale_x_continuous(expand = c(0,0)) +
-    labs(y = NULL, x = "tf-idf", title = "Highest tf-idf words in Freeland Bunker's Journal entries associated with mention of Coal")
-```
-
-
-#Hay
-```{r filter-for-hay}
-library(stringr)
-
-Hay <-  dplyr::filter(item_count, grepl('Hay', item))
-
-#https://stackoverflow.com/questions/22850026/filter-rows-which-contain-a-certain-string
-```
-```{r separate-out-words-in-entries}
-(hay_words <- Hay %>%
-    unnest_tokens(word, journal_entry) %>%
-    count(journal, word, sort = TRUE) %>%
-    filter(!word %in% stop_words$word))
-```
-```{r find-tfidf}
-hay_tf_idf <- hay_words %>%
-    bind_tf_idf(word, journal, n) %>%
-    arrange(desc(tf_idf))
-```
-```{r plot-tfidf}
-hay_tf_idf %>%
-#  filter(tf_idf >= 0.02) %>%
-    group_by(journal) %>%
-    slice_max(tf_idf, n = 10) %>%
-    ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = journal)) +
-    geom_col(show.legend = FALSE) +
-    facet_wrap(vars(journal), scales = "free") +
-    scale_x_continuous(expand = c(0,0)) +
-    labs(y = NULL, x = "tf-idf", title = "Highest tf-idf words in Freeland Bunker's Journal entries associated with mention of Hay")
-```

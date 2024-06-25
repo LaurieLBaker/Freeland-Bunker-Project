@@ -1,0 +1,73 @@
+---
+title: "Wind Data Explorations"
+author: "Laurie and Jeremy"
+date: '2024-06-25'
+output: html_document
+---
+```{r install-packages}
+# install.packages(c("tidyverse", 
+#                   "tidytext",
+#                   "stopwords",
+#                   "widyr",
+#                   "tidygraph",
+#                   "tidylo",
+#                   "ggraph",
+ #                  "wordcloud",
+  #                 "dplyr", 
+# "googlesheets4", 
+#"gargle"))
+```
+
+
+```{r read-in-packages}
+library(dplyr)
+library(tidyverse)
+library(magrittr) 
+library(tidyverse)
+library(tidytext)
+library(googlesheets4)
+library(gargle)
+library(googledrive)
+```
+
+## Read in journals data
+```{r read-in-data}
+library(readr)
+journals <- read_csv("../data/journals.csv") 
+```
+
+# Filter for most mentioned items
+
+```{r extract-wind-references}
+wind_references <- journals %>%
+  mutate(wind_reference = str_extract(journal_entry, pattern = "(?<=Wind |wind )[A-Z\\.a-z]+" )) %>%
+  distinct(wind_reference) %>%
+  pull(wind_reference)
+
+N_wind <- c()
+E_wind <- c()
+S_wind <- c()
+W_wind <- c()
+
+NE_wind <- c()
+SE_wind <- c()
+SW_wind <- c()
+NW_wind <- c()
+
+
+NNE_wind <- c()
+ENE_wind <- c()
+ESE_wind <- c()
+SSE_wind <- c()
+SSW_wind <- c()
+WSW_wind <- c()
+WNW_wind <- c()
+NNW_wind <- c()
+
+# Create a string with all of them and also fix transcripts:
+
+# (Fix issues)
+journals %>%
+  filter(str_detect(journal_entry, pattern = "Wind WouthSouth|wind WouthSouth"))
+
+```

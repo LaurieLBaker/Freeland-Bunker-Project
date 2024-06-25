@@ -9,15 +9,15 @@ output: html_document
 
 ```{r install-packages}
 
-install.packages(c("tidyverse", 
-                   "tidytext",
-                   "stopwords",
-                   "widyr",
-                   "tidygraph",
-                   "tidylo",
-                   "ggraph",
-                   "wordcloud",
-                   "dplyr"))
+# install.packages(c("tidyverse", 
+#                    "tidytext",
+#                    "stopwords",
+#                    "widyr",
+#                    "tidygraph",
+#                    "tidylo",
+#                    "ggraph",
+#                    "wordcloud",
+#                    "dplyr"))
 ```
 
 
@@ -32,112 +32,7 @@ library(tidytext)
 
 ```{r read-in-data}
 library(readr)
-journal_71_72 <- read_csv("Data_Sets/journal_1871_1872 - Sheet1 (1).csv")
-journal_73 <- read_csv("Data_Sets/journal_1873 - Sheet1.csv")
-journal_74 <- read_csv("Data_Sets/journal_1874 - Sheet1.csv")
-journal_75 <- read_csv("Data_Sets/journal_1875 - Sheet1.csv")
-journal_76 <- read_csv("Data_Sets/journal_1876 - Sheet1.csv")
-journal_77 <- read_csv("Data_Sets/journal_1877 - Sheet1.csv")
-journal_80 <- read_csv("Data_Sets/journal_1880 - Sheet1.csv")
-journal_83 <- read_csv("Data_Sets/journal_1883 - Sheet1.csv")
-journal_84 <- read_csv("Data_Sets/journal_1884 - Sheet1.csv")
-journal_86 <- read_csv("Data_Sets/journal_1886 - Sheet1.csv")
-
-
-```
-
-```{r assign-new-column}
-#assign a new column in each dataset to correspond with what journal each entry is from
-journal_71_72$journal <- 1
-journal_73$journal <- 2
-journal_74$journal <- 3
-journal_75$journal <- 4
-journal_76$journal <- 5
-journal_77$journal <- 6
-
-journal_80$journal <- 9
-
-journal_83$journal <- 12
-journal_84$journal <- 13
-
-journal_86$journal <- 15
-```
-
-```{r adjust-variable-type}
-#in order to join data sets, all the corresponding variables have to match; we glimpse() each dataset and changed variable that didn't match our first one
-
-journal_71_72 <- journal_71_72 %>%
-  rename(transcription_accuracy = transcription) %>%
-  mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description))
-
-journal_75 <- journal_75 %>%
-  mutate(quantity = as.character(quantity)) %>%
-  mutate(latitude = as.logical(latitude)) %>%
-  mutate(latitude_origin = as.logical(latitude_origin)) %>%
-  mutate(longitude = as.logical(longitude)) %>%
-  mutate(longitude_origin = as.logical(longitude_origin))
-
-journal_76 <- journal_76 %>%
-  mutate(quantity = as.character(quantity)) %>%
-  mutate(latitude = as.logical(latitude)) %>%
-  mutate(latitude_origin = as.logical(latitude_origin)) %>%
-  mutate(longitude = as.logical(longitude)) %>%
-  mutate(longitude_origin = as.logical(longitude_origin)) %>%
-  mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.logical(noteworthy))
-
-journal_77 <- journal_77 %>%
-  mutate(quantity = as.character(quantity)) %>%
-  mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.logical(noteworthy)) %>%
-  mutate(temperature_am = as.logical(temperature_am))
-
-journal_80 <- journal_80 %>%
-  mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.logical(noteworthy)) %>%
-  mutate(temperature_am = as.logical(temperature_am)) %>%
-  mutate(temperature_pm = as.logical(temperature_pm)) %>%
-  mutate(temperature_night = as.logical(temperature_night))
-  
-journal_86 <- journal_86 %>%
-  mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.logical(noteworthy)) %>%
-  mutate(temperature_am = as.logical(temperature_am)) %>%
-  mutate(temperature_pm = as.logical(temperature_pm)) %>%
-  mutate(temperature_night = as.logical(temperature_night)) %>%
-  mutate(latitude = as.logical(latitude)) %>%
-  mutate(recorder = as.character(recorder)) %>%
-  mutate(notes = as.character(notes)) %>%
-  select(- ...37)
-
-journal_83 <- journal_83 %>%
-  mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.logical(noteworthy)) %>%
-  mutate(temperature_am = as.logical(temperature_am)) %>%
-  mutate(latitude = as.logical(latitude)) %>%
-  mutate(latitude_origin = as.logical(latitude_origin)) %>%
-  mutate(longitude_origin = as.logical(longitude_origin)) %>%
-  mutate(letter_from = as.character(letter_from))
-  
-journal_84 <- journal_84 %>%
-  mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.logical(noteworthy)) %>%
-  mutate(temperature_am = as.logical(temperature_am)) %>%
-  mutate(latitude = as.logical(latitude)) %>%
-  mutate(latitude_origin = as.logical(latitude_origin)) %>%
-  mutate(letter_to = as.character(letter_to))%>%
-  mutate(notes = as.character(notes))  
-```
-
-```{r join-datasets}
-journals <- dplyr::bind_rows(journal_71_72, journal_73, journal_74, journal_75, journal_76, journal_77, journal_80, journal_86)
+journals <- read_csv("..data/journals.csv") 
 ```
 
 
