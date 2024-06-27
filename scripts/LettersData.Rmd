@@ -29,7 +29,7 @@ library(tidytext)
 
 ```{r read-in-data}
 library(readr)
-journals <- read_csv("..data/journals.csv") 
+journals <- read_csv("../data/journals.csv") 
 ```
 
 
@@ -45,6 +45,7 @@ read_letters <- letters %>%
   filter(letter_from != "NA")
   
 ```
+
 ```{r filter-for-written-letters}
 write_letters <- letters %>%
   filter(letter_to != "NA")
@@ -57,28 +58,13 @@ write_letters <- letters %>%
 #sometimes multiple things are in a list in one entry of a column, we want to separate to be able to count them all individually
 
 read_letters <- read_letters %>%
-  separate(letter_from, c("person_1", "person_2", "person_3", "person_4"), sep = ",")
+  separate_longer_delim(letter_from, delim = ",")
 ```
 
-```{r reorganize-to-combine-separated-people}
-per_1 <- read_letters %>%
-  select(person_1, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
-  rename(from = person_1)
-per_2 <- read_letters %>%
-  select(person_2, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
-  rename(from = person_2)
-per_3 <- read_letters %>%
-  select(person_3, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
-  rename(from = person_3)
-per_4 <- read_letters %>%
-  select(person_4, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
-  rename(from = person_4)
 
-read_letters <- dplyr::bind_rows(per_1, per_2, per_3, per_4)
-```
 ```{r standardize-formatting}
 read_letters <- read_letters %>%
-  mutate(from = str_to_title(from)) %>%
+  mutate(from = str_to_title(letter_from)) %>%
   mutate(from = trimws(from, "both")) %>%
   filter(from != "NA")
 ```
@@ -93,29 +79,14 @@ read_letters <- read_letters %>%
 # Count people Freeland most often wrote letters to
 
 ```{r separate-for-multiple-people}
+
 write_letters <- write_letters %>%
-  separate(letter_to, c("person_1", "person_2", "person_3", "person_4"), sep = ",")
+  separate_longer_delim(letter_to, delim = ",")
 ```
 
-```{r reorganize-to-combine-separated-people}
-per_1 <- write_letters %>%
-  select(person_1, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
-  rename(to = person_1)
-per_2 <- write_letters %>%
-  select(person_2, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
-  rename(to = person_2)
-per_3 <- write_letters %>%
-  select(person_3, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
-  rename(to = person_3)
-per_4 <- write_letters %>%
-  select(person_4, journal, journal_entry, date_mdy, month, transcription_accuracy, location, location_accuracy, local_place, local_place_accuracy, latitude,latitude_origin, longitude, longitude_origin, quantity, unit, item, letter, wind_direction_am, wind_direction_pm, wind_direction_night, weather_condition_am, weather_condition_pm, weather_condition_night, temperature_am, temperature_pm, temperature_night, image_path, image_description, recorder, notes, noteworthy, second_check) %>%
-  rename(to = person_4)
-
-write_letters <- dplyr::bind_rows(per_1, per_2, per_3, per_4)
-```
 ```{r standardize-formatting}
 write_letters <- write_letters %>%
-  mutate(to = str_to_title(to)) %>%
+  mutate(to = str_to_title(letter_to)) %>%
   mutate(to = trimws(to, "both")) %>%
   filter(to != "NA")
 ```
