@@ -16,11 +16,14 @@ output: html_document
         #           "dplyr"))
 ```
 
+<<<<<<< HEAD
 ```{Rcpp}
 
 ```
 
 
+=======
+>>>>>>> 48fba35823601e4922d0723707bf90db43a5f0f6
 
 ```{r read-in-packages}
 library(dplyr)
@@ -69,13 +72,19 @@ read_letters <- read_letters %>%
 
 ```{r standardize-formatting}
 read_letters <- read_letters %>%
+<<<<<<< HEAD
   mutate(from = trimws(letter_from, "both")) %>%
+=======
+  mutate(from = str_to_title(letter_from)) %>%
+  mutate(from = trimws(from, "both")) %>%
+>>>>>>> 48fba35823601e4922d0723707bf90db43a5f0f6
   filter(from != "NA")
 ```
 
 ```{r count-read-letters}
 (read_count <- read_letters %>%
    filter(from!= "NA") %>%
+<<<<<<< HEAD
    mutate(year = year(date_mdy)) %>%
     count(from, year, sort = TRUE))
 
@@ -84,6 +93,9 @@ read_unique <- unique(read_count)
 View(read_unique)
 
 write_csv(read_count, file = "../data/received_letter_list.csv")
+=======
+    count(from, sort = TRUE))
+>>>>>>> 48fba35823601e4922d0723707bf90db43a5f0f6
 ```
 
 
@@ -108,8 +120,11 @@ write_letters <- write_letters %>%
    filter(to != "NA") %>%
     count(to, sort = TRUE))
 
+<<<<<<< HEAD
 write_csv(write_count, file = "../data/wrote_letter_list.csv")
 
+=======
+>>>>>>> 48fba35823601e4922d0723707bf90db43a5f0f6
 ```
 
 #Info on idividuals
@@ -117,7 +132,11 @@ We picked top five letter writers/recievers & read any journal entry that mentio
 
 ```{r filter-for-Kittridge}
 ben_kitt <-letters %>%
+<<<<<<< HEAD
   filter(grepl('Charles C. Burrill|C.C. Burrill|C C Buril', letter_from))
+=======
+  filter(grepl('Benjamin Kittridge|benjamin kittridge', letter_from))
+>>>>>>> 48fba35823601e4922d0723707bf90db43a5f0f6
 ben_kitt_2 <-letters %>%
   filter(grepl('Benjamin Kittridge|benjamin kittridge', letter_to))
 
@@ -132,7 +151,11 @@ ben_kitt <- dplyr::bind_rows(ben_kitt, ben_kitt_2)
 Bk mentions outside of letters
 ```{r filter-for-Kittridge}
 bk_mention <-journals %>%
+<<<<<<< HEAD
   filter(grepl('work in shop', journal_entry)) %>%
+=======
+  filter(grepl('Benj. Kittridge|Benjamin Kittredge|Kittredge', journal_entry)) %>%
+>>>>>>> 48fba35823601e4922d0723707bf90db43a5f0f6
   filter(letter == "no letter")
 ```
 ```{r find-words-mentioned-most-with-Kittridge}
@@ -150,6 +173,7 @@ Info Obtained:
 
 #CC Burrill
 ```{r filter-for-Burrill}
+<<<<<<< HEAD
 
 #Options to search
 # (Fix issues)
@@ -157,6 +181,8 @@ Info Obtained:
 #   filter(str_detect(journal_entry, pattern = 'Charles C. Burrill|C. C. Burrill'))
 
 
+=======
+>>>>>>> 48fba35823601e4922d0723707bf90db43a5f0f6
 CC_Burr <-letters %>%
   filter(grepl('Charles C. Burrill|C. C. Burrill', letter_from))
 CC_Burr_2 <-letters %>%
@@ -208,11 +234,17 @@ Tom_Bunk <- dplyr::bind_rows(Tom_Bunk, Tom_Bunk_2)
 TB mentions outside of letters
 ```{r filter-for-Bunker}
 tb_mention <-journals %>%
+<<<<<<< HEAD
   filter(grepl('lumber', journal_entry)) 
   filter(letter == "no letter")
 ```
 
 
+=======
+  filter(grepl('Thomas Bunker|Thom Bunker|thomas Bunker', journal_entry)) %>%
+  filter(letter == "no letter")
+```
+>>>>>>> 48fba35823601e4922d0723707bf90db43a5f0f6
 ```{r find-words-mentioned-most-with-Bunker}
 (tb_word_xletter <- tb_mention %>%
   filter(letter == "no letter") %>%

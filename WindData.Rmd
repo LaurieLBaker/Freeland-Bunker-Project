@@ -463,6 +463,39 @@ wind_speed_patterns <- read_excel("/Users/francesleduke/Downloads/freelandbunker
 ```
 
 
+<<<<<<< HEAD
+=======
+```{r}
+## Run all the code chunks above with the upside-down play button
+
+# head(journal_wind)
+# 
+# head(improve_wind_search)
+# 
+# head(improve_wind_speed_search)
+
+## Frances - you can add more Wind Speed Patterns here
+
+# wind_speed_patterns <- "(?i)\\b(strong|powerful|heavy|intense|light|gentle|soft|calm|still|moderate|steady|gusty|blustery|variable|calm|pleasant|fine|clear|light|fresh breeze|scant|fine|clam|clear|light|cleared of wind|smooth|baffling wind|eased|light air|fesh|dead calm|died out|hair|no wind|becalmed|not wind enough|baffling|becalmed|cleared up|very light air of wind|light air|perfectly calm|hazed up|wind out|hauling little|baffling|fresh|squally|brisk|stormy|tempestuous|moderate|fresh breeze|strong breeze|smart breeze|fresh blow good breeze|very fresh breeze|moderating|blowy|blowing|variable|breezing|whole sail breeze|changeable|fresh trade winds|high|peak breeze|mederate|fine|perfect|hauled down|steady|fine|wind increasing|breezed up|increasing|wind out|baffling and moderate|blustering|heavy blow|heavy|strong|rough|windstorm |big storm |heavy breeze|gale|stronger|tremendous|squall|hard|blowing a gale|hauled|squalls|hauling|terrific storm |blowing hard|squalls|perfect gale|squall|high winds|blew very heavy|fearfuly|blowed fearfuly|hauling out|rain squalls|growing rough|very moderate, calm|fresh breeze, rough|heavy blow, rough|sair|mode|wind increasing|wind out|squall, moderate|bills of laden wind|hauling little)\\b"
+# 
+# 
+# five_knots <- "calm|pleasant|fine|clear|light|fresh breeze|scant|fine|clam|clear|light|cleared of wind|smooth|baffling wind|eased|light air|fesh|dead calm|died out|hair|no wind|becalmed|not wind enough|baffling|becalmed|cleared up|very light air of wind|light air|perfectly calm|hazed up|wind out|hauling little"
+# 
+# #ten_knots <- "baffling|calm|" # Idk bc i only made three categories 
+# 
+# fifteen_knots <- "moderate|fresh breeze|strong breeze|smart breeze|fresh blow
+# good breeze|very fresh breeze|moderating|blowy|blowing|variable|breezing|whole sail breeze|changeable|fresh trade winds|high|peak breeze|mederate|fine|perfect|hauled down|steady|fine|wind increasing|breezed up|increasing|wind out|baffling and moderate"
+# 
+# above_twenty_knots <- "blustering|heavy blow|heavy|strong|rough|windstorm|big storm|heavy breeze|gale|stronger|tremendous|squall|hard|blowing a gale|hauled|squalls|hauling|terrific storm|blowing hard|squalls|perfect gale|squall|high winds|blew very heavy|fearfuly|blowed fearfuly|hauling out|rain squalls|growing rough"
+# 
+# undecided <- "very moderate, calm|fresh breeze, rough|heavy blow, rough|sair|mode|wind increasing|wind out|squall, moderate|bills of laden wind|hauling little"
+
+
+
+
+```
+
+>>>>>>> 48fba35823601e4922d0723707bf90db43a5f0f6
 
 ## Create a data frame 
 
@@ -583,6 +616,7 @@ journal_wind_df <- journal_wind_df |>
 
 ```
 
+<<<<<<< HEAD
 # Creating a beaufort column 
 ```{r}
 
@@ -656,6 +690,8 @@ sum(beaufort_grouped$frequency[1:65])
 ```
 
 
+=======
+>>>>>>> 48fba35823601e4922d0723707bf90db43a5f0f6
 ## Plot with animation by year 
 
 ```{r}
@@ -812,6 +848,7 @@ ggsave(filename = "wind_facets.jpg", width = 14, height = 7)
   
 ```
 
+<<<<<<< HEAD
 ```{r}
 
 test <- journal_wind_df |>
@@ -955,6 +992,8 @@ ggplot(data = journal_wind_df, aes(x = date, y = wind_speed_knots)) +
 
 
 
+=======
+>>>>>>> 48fba35823601e4922d0723707bf90db43a5f0f6
 ## Time series plottin'
 
 ```{r}

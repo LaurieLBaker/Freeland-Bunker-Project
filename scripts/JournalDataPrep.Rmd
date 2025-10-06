@@ -17,12 +17,19 @@ output: html_document
   #                 "dplyr", 
 # "googlesheets4", 
 #"gargle"))
+<<<<<<< HEAD
 
 ### Resources to add to trello: https://coa-navigating-change.netlify.app/post/04-week/
 ```
 
 
 ```{r read-in-packages, message = FALSE}
+=======
+```
+
+
+```{r read-in-packages}
+>>>>>>> 48fba35823601e4922d0723707bf90db43a5f0f6
 library(dplyr)
 library(tidyverse)
 library(magrittr) 
@@ -31,15 +38,24 @@ library(tidytext)
 library(googlesheets4)
 library(gargle)
 library(googledrive)
+<<<<<<< HEAD
 library(readxl)
+=======
+>>>>>>> 48fba35823601e4922d0723707bf90db43a5f0f6
 ```
 
 
 ```{r read-in-data}
 
+<<<<<<< HEAD
 # # Either specify the user:
 # drive_auth(email = "fleduke27@coa.edu",
 #            scopes = "drive.readonly")
+=======
+# Either specify the user:
+drive_auth(email = "lbaker@coa.edu",
+           scopes = "drive.readonly")
+>>>>>>> 48fba35823601e4922d0723707bf90db43a5f0f6
 
 journal_71_72 <- read_sheet('https://docs.google.com/spreadsheets/d/1f3buvhuRprNvo_2a4TwjgN-Qez0NkLk6d2VBjhsVt5Y/edit?gid=0#gid=0')
 journal_73 <- read_sheet('https://docs.google.com/spreadsheets/d/1GwncgtXAYXHKhhLlVi5hquwziiKPLk5DrKGlVX0KVA4/edit?gid=0#gid=0')
@@ -57,7 +73,11 @@ journal_84 <- read_sheet('https://docs.google.com/spreadsheets/d/1EDmiVyAiORba3r
 journal_85 <- read_sheet('https://docs.google.com/spreadsheets/d/1JBFWlfNKH8T1b6BgstqWtIzQJtIv8WX-RL2rVSdrrPQ/edit?gid=0#gid=0')
 journal_86 <- read_sheet('https://docs.google.com/spreadsheets/d/1FGM7h5C-JEg4QdxWTLT-qQMk_F9ssqMHM7NACaEd6D0/edit?gid=0#gid=0')
 journal_87 <- read_sheet('https://docs.google.com/spreadsheets/d/1L1wsbbxKNIUEXlqUZVBIHzbgGH9wWbyp0RvFrgODG68/edit?gid=0#gid=0')
+<<<<<<< HEAD
 #journal_88 <- read_sheet('https://docs.google.com/spreadsheets/d/1LS9045UxtPU-wtjX0kqZTG0Cwd0MlWKXm5Je-QbZR-A/edit?gid=0#gid=0')
+=======
+journal_88 <- read_sheet('https://docs.google.com/spreadsheets/d/1LS9045UxtPU-wtjX0kqZTG0Cwd0MlWKXm5Je-QbZR-A/edit?gid=0#gid=0')
+>>>>>>> 48fba35823601e4922d0723707bf90db43a5f0f6
 
 ```
 
@@ -77,7 +97,10 @@ journal_83$journal <- 12
 journal_84$journal <- 13
 journal_85$journal <- 14
 journal_86$journal <- 15
+<<<<<<< HEAD
 journal_87$journal <- 16
+=======
+>>>>>>> 48fba35823601e4922d0723707bf90db43a5f0f6
 ```
 
 ```{r adjust-variable-type}
