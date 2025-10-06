@@ -1,10 +1,6 @@
 ---
 title: "Wind Data Explorations"
-<<<<<<< HEAD
 author: "Laurie and Frances"
-=======
-author: "Laurie and Jeremy"
->>>>>>> 48fba35823601e4922d0723707bf90db43a5f0f6
 date: '2024-06-25'
 output: html_document
 ---
@@ -18,7 +14,6 @@ output: html_document
 #                   "ggraph",
  #                  "wordcloud",
   #                 "dplyr", 
-<<<<<<< HEAD
 # "googlesheets4",
 # "visdat",
 # "naniar",
@@ -27,10 +22,6 @@ output: html_document
 #install.packages("readxl")
 #install.packages("dplyr")
 
-=======
-# "googlesheets4", 
-#"gargle"))
->>>>>>> 48fba35823601e4922d0723707bf90db43a5f0f6
 ```
 
 
@@ -43,7 +34,6 @@ library(tidytext)
 library(googlesheets4)
 library(gargle)
 library(googledrive)
-<<<<<<< HEAD
 library(visdat)
 library(naniar)
 library(magrittr) 
@@ -53,11 +43,6 @@ library(readxl)
 
 ## Read in journals data
 
-=======
-```
-
-## Read in journals data
->>>>>>> 48fba35823601e4922d0723707bf90db43a5f0f6
 ```{r read-in-data}
 library(readr)
 journals <- read_csv("../data/journals.csv") 
@@ -65,7 +50,6 @@ journals <- read_csv("../data/journals.csv")
 
 # Filter for most mentioned items
 
-<<<<<<< HEAD
 
 ```{r}
 # Define a function to extract wind direction notation
@@ -1023,38 +1007,3 @@ ggplot(aes(x = date_mdy, y = wind_speed_knots)) + # x-axis = date, y-axis = wind
 
 
 
-=======
-```{r extract-wind-references}
-wind_references <- journals %>%
-  mutate(wind_reference = str_extract(journal_entry, pattern = "(?<=Wind |wind )[A-Z\\.a-z]+" )) %>%
-  distinct(wind_reference) %>%
-  pull(wind_reference)
-
-N_wind <- c()
-E_wind <- c()
-S_wind <- c()
-W_wind <- c()
-
-NE_wind <- c()
-SE_wind <- c()
-SW_wind <- c()
-NW_wind <- c()
-
-
-NNE_wind <- c()
-ENE_wind <- c()
-ESE_wind <- c()
-SSE_wind <- c()
-SSW_wind <- c()
-WSW_wind <- c()
-WNW_wind <- c()
-NNW_wind <- c()
-
-# Create a string with all of them and also fix transcripts:
-
-# (Fix issues)
-journals %>%
-  filter(str_detect(journal_entry, pattern = "Wind WouthSouth|wind WouthSouth"))
-
-```
->>>>>>> 48fba35823601e4922d0723707bf90db43a5f0f6
