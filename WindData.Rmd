@@ -1,0 +1,1202 @@
+---
+title: "Wind Data Explorations"
+author: "Laurie and Frances"
+date: '2024-06-25'
+output: html_document
+---
+
+# test commit 
+
+```{r install-packages}
+# install.packages(c("tidyverse", 
+#                   "tidytext",
+#                   "stopwords",
+#                   "widyr",
+#                   "tidygraph",
+#                   "tidylo",
+#                   "ggraph",
+ #                  "wordcloud",
+  #                 "dplyr", 
+# "googlesheets4",
+# "visdat",
+# "naniar",
+#"gargle"))
+#install.packages("magrittr")
+#install.packages("readxl")
+#install.packages("dplyr")
+
+```
+
+
+```{r read-in-packages}
+library(dplyr)
+library(tidyverse)
+library(magrittr) 
+library(tidyverse)
+library(tidytext)
+library(googlesheets4)
+library(gargle)
+library(googledrive)
+library(visdat)
+library(naniar)
+library(magrittr) 
+library(dplyr) 
+library(readxl)
+```
+
+## Read in journals data
+
+```{r read-in-data}
+library(readr)
+journals <- read_csv("/Users/francesleduke/Downloads/freelandbunker/data/journals.csv") 
+```
+
+# Filter for most mentioned items
+
+```{r}
+# Define a function to extract wind direction notation
+extract_wind_direction <- function(entry) {
+  directions <- c("N", "S", "E", "W", "NE", "NW", "SE", "SW", "NNE", "NNW", "SSE", "SSW", "ENE", "ESE", "WNW", "WSW")
+  # Search for any of the directions in the entry
+  matched_directions <- grep(paste(directions, collapse="|"), entry, value = FALSE, ignore.case = TRUE)
+  if (length(matched_directions) > 0) {
+    return(directions[matched_directions])
+  } else {
+    return(NA)
+  }
+}
+
+# # Mutate a new column with the wind direction notation
+journals_wind_reference <- journals %>%
+  mutate(Wind_Direction = sapply(journal_entry, extract_wind_direction))
+
+#combine journal_entry and wind_direction_am into a new tibble
+journals_combined <- journals %>%
+  select(journal_entry, wind_direction_am) %>%
+  as_tibble()
+
+# Define a function to search for a given prevailing wind direction
+search_wind_direction <- function(wind_direction) {
+  results <- journals_combined %>%
+    filter(grepl(wind_direction, wind_direction_am, ignore.case = TRUE))
+  return(results)
+}
+
+# Example usage: Search for entries with "N_wind"
+search_results <- search_wind_direction("N")
+
+
+# Print the search results
+print(search_results)
+
+```
+
+
+
+```{r extract-wind-references}
+
+# Wind Search Wind Before and After ----
+
+## Patterns to capture "North" wind references ----
+N_wind <- c(
+    "(?i)\\bwind\\s+North\\b",          # "wind North"
+    "(?i)\\bwind\\s+N\\b",               # "wind N"
+    "(?i)\\bwind\\s+N.\\b",              # "wind N." with period variation
+    "(?i)\\bwind\\s+Northerly\\b",       # "wind Northerly"
+    "(?i)\\bwind\\s+Northly\\b",         # "wind Northly"
+    "(?i)\\bNorth\\s+wind\\b",           # "North wind"
+    "(?i)\\bNortherly\\s+wind\\b",       # "Northerly wind"
+    "(?i)\\bN\\s+wind\\b",               # "N wind"
+    "(?i)\\bN.\\s+wind\\b",              # "N. wind"
+    "(?i)\\bNorth\\s+to\\s+East\\b",     # "North to East"
+    "(?i)\\bwind\\s+from\\s+North\\b",   # "wind from North"
+    "(?i)\\bwind\\s+Northerly.\\b"       # "wind Northerly." with period variation
+)
+
+## Patterns to capture "East" wind references ----
+E_wind <- c(
+    "(?i)\\bwind\\s+East\\b",             # "wind East"
+    "(?i)\\bwind\\s+E\\b",                # "wind E"
+    "(?i)\\bwind\\s+E.\\b",               # "wind E." with period variation
+    "(?i)\\bwind\\s+Easterly\\b",         # "wind Easterly"
+    "(?i)\\bwind\\s+Eastly\\b",           # "wind Eastly"
+    "(?i)\\bEast\\s+wind\\b",             # "East wind"
+    "(?i)\\bEasterly\\s+wind\\b",         # "Easterly wind"
+    "(?i)\\bE\\s+wind\\b",                # "E wind"
+    "(?i)\\bE.\\s+wind\\b",               # "E. wind" with period variation
+    "(?i)\\bEast\\s+to\\s+South\\b",      # "East to South"
+    "(?i)\\bwind\\s+from\\s+East\\b",     # "wind from East"
+    "(?i)\\bwind\\s+Easterly.\\b"         # "wind Easterly." with period variation
+)
+
+## Patterns to capture "South" wind references ----
+S_wind <- c(
+    "(?i)\\bwind\\s+South\\b",            # "wind South"
+    "(?i)\\bwind\\s+S\\b",                # "wind S"
+    "(?i)\\bwind\\s+S.\\b",               # "wind S." with period variation
+    "(?i)\\bwind\\s+Southerly\\b",        # "wind Southerly"
+    "(?i)\\bwind\\s+Southly\\b",          # "wind Southly"
+    "(?i)\\bSouth\\s+wind\\b",            # "South wind"
+    "(?i)\\bSoutherly\\s+wind\\b",        # "Southerly wind"
+    "(?i)\\bS\\s+wind\\b",                # "S wind"
+    "(?i)\\bS.\\s+wind\\b",               # "S. wind" with period variation
+    "(?i)\\bSouth\\s+to\\s+East\\b",      # "South to East"
+    "(?i)\\bwind\\s+from\\s+South\\b",    # "wind from South"
+    "(?i)\\bwind\\s+Southerly.\\b"        # "wind Southerly." with period variation
+)
+
+## Patterns to capture "West" wind references ----
+W_wind <- c(
+    "(?i)\\bwind\\s+West\\b",            # "wind West"
+    "(?i)\\bwind\\s+W\\b",               # "wind W"
+    "(?i)\\bwind\\s+W.\\b",              # "wind W." with period variation
+    "(?i)\\bwind\\s+Westerly\\b",        # "wind Westerly"
+    "(?i)\\bwind\\s+Westly\\b",          # "wind Westly"
+    "(?i)\\bWest\\s+wind\\b",            # "West wind"
+    "(?i)\\bWesterly\\s+wind\\b",        # "Westerly wind"
+    "(?i)\\bW\\s+wind\\b",               # "W wind"
+    "(?i)\\bW.\\s+wind\\b",              # "W. wind" with period variation
+    "(?i)\\bWest\\s+to\\s+North\\b",     # "West to North"
+    "(?i)\\bwind\\s+from\\s+West\\b",    # "wind from West"
+    "(?i)\\bwind\\s+Westerly.\\b"        # "wind Westerly." with period variation
+)
+
+## Patterns to capture "Northeast" wind references ----
+NE_wind <- c(
+    "(?i)\\bwind\\s+NE\\b",               # "wind NE"
+    "(?i)\\bwind\\s+N.E.\\b",             # "wind N.E."
+    "(?i)\\bwind\\s+Northeast\\b",        # "wind Northeast"
+    "(?i)\\bwind\\s+North[-\\s]*East\\b", # "wind North East"
+    "(?i)\\bNE\\s+wind\\b",               # "NE wind"
+    "(?i)\\bN.E.\\s+wind\\b",             # "N.E. wind"
+    "(?i)\\bNortheast\\s+wind\\b"         # "Northeast wind"
+)
+
+## Patterns to capture "Northwest" wind references ----
+NW_wind <- c(
+    "(?i)\\bwind\\s+NW\\b",               # "wind NW"
+    "(?i)\\bwind\\s+N.W.\\b",             # "wind N.W."
+    "(?i)\\bwind\\s+Northwest\\b",        # "wind Northwest"
+    "(?i)\\bwind\\s+North[-\\s]*West\\b", # "wind North West"
+    "(?i)\\bNW\\s+wind\\b",               # "NW wind"
+    "(?i)\\bN.W.\\s+wind\\b",             # "N.W. wind"
+    "(?i)\\bNorthwest\\s+wind\\b"         # "Northwest wind"
+)
+
+## Patterns to capture "Southeast" wind references ----
+SE_wind <- c(
+    "(?i)\\bwind\\s+SE\\b",               # "wind SE"
+    "(?i)\\bwind\\s+S.E.\\b",             # "wind S.E."
+    "(?i)\\bwind\\s+Southeast\\b",        # "wind Southeast"
+    "(?i)\\bwind\\s+South[-\\s]*East\\b", # "wind South East"
+    "(?i)\\bSE\\s+wind\\b",               # "SE wind"
+    "(?i)\\bS.E.\\s+wind\\b",             # "S.E. wind"
+    "(?i)\\bSoutheast\\s+wind\\b"         # "Southeast wind"
+)
+
+## Patterns to capture "Southwest" wind references ----
+SW_wind <- c(
+    "(?i)\\bwind\\s+SW\\b",               # "wind SW"
+    "(?i)\\bwind\\s+S.W.\\b",             # "wind S.W."
+    "(?i)\\bwind\\s+Southwest\\b",        # "wind Southwest"
+    "(?i)\\bwind\\s+South[-\\s]*West\\b", # "wind South West"
+    "(?i)\\bSW\\s+wind\\b",               # "SW wind"
+    "(?i)\\bS.W.\\s+wind\\b",             # "S.W. wind"
+    "(?i)\\bSouthwest\\s+wind\\b"         # "Southwest wind"
+)
+
+## Patterns to capture "North Northeast" wind references ----
+NNE_wind <- c(
+    "(?i)\\bwind\\s+NNE\\b",              # "wind NNE"
+    "(?i)\\bwind\\s+N.N.E.\\b",           # "wind N.N.E."
+    "(?i)\\bwind\\s+North[-\\s]*Northeast\\b", # "wind North Northeast"
+    "(?i)\\bNNE\\s+wind\\b",              # "NNE wind"
+    "(?i)\\bN.N.E.\\s+wind\\b",           # "N.N.E. wind"
+    "(?i)\\bNorth[-\\s]*Northeast\\s+wind\\b" # "North Northeast wind"
+)
+
+## Patterns to capture "North Northwest" wind references ----
+NNW_wind <- c(
+    "(?i)\\bwind\\s+NNW\\b",              # "wind NNW"
+    "(?i)\\bwind\\s+N.N.W.\\b",           # "wind N.N.W."
+    "(?i)\\bwind\\s+North[-\\s]*Northwest\\b", # "wind North Northwest"
+    "(?i)\\bNNW\\s+wind\\b",              # "NNW wind"
+    "(?i)\\bN.N.W.\\s+wind\\b",           # "N.N.W. wind"
+    "(?i)\\bNorth[-\\s]*Northwest\\s+wind\\b" # "North Northwest wind"
+)
+
+## Patterns to capture "South Southeast" wind references ----
+SSE_wind <- c(
+    "(?i)\\bwind\\s+SSE\\b",              # "wind SSE"
+    "(?i)\\bwind\\s+S.S.E.\\b",           # "wind S.S.E."
+    "(?i)\\bwind\\s+South[-\\s]*Southeast\\b", # "wind South Southeast"
+    "(?i)\\bSSE\\s+wind\\b",              # "SSE wind"
+    "(?i)\\bS.S.E.\\s+wind\\b",           # "S.S.E. wind"
+    "(?i)\\bSouth[-\\s]*Southeast\\s+wind\\b" # "South Southeast wind"
+)
+
+## Patterns to capture "South Southwest" wind references ----
+SSW_wind <- c(
+    "(?i)\\bwind\\s+SSW\\b",              # "wind SSW"
+    "(?i)\\bwind\\s+S.S.W.\\b",           # "wind S.S.W."
+    "(?i)\\bwind\\s+South[-\\s]*Southwest\\b", # "wind South Southwest"
+    "(?i)\\bSSW\\s+wind\\b",              # "SSW wind"
+    "(?i)\\bS.S.W.\\s+wind\\b",           # "S.S.W. wind"
+    "(?i)\\bSouth[-\\s]*Southwest\\s+wind\\b" # "South Southwest wind"
+)
+
+
+## Patterns to capture "East Northeast" wind references ----
+ENE_wind <- c(
+    "(?i)\\bwind\\s+ENE\\b",              # "wind ENE"
+    "(?i)\\bwind\\s+E.N.E.\\b",           # "wind E.N.E."
+    "(?i)\\bwind\\s+East[-\\s]*Northeast\\b", # "wind East Northeast"
+    "(?i)\\bENE\\s+wind\\b",              # "ENE wind"
+    "(?i)\\bE.N.E.\\s+wind\\b",           # "E.N.E. wind"
+    "(?i)\\bEast[-\\s]*Northeast\\s+wind\\b" # "East Northeast wind"
+)
+
+
+## Patterns to capture "East Southeast" wind references ----
+ESE_wind <- c(
+    "(?i)\\bwind\\s+ESE\\b",              # "wind ESE"
+    "(?i)\\bwind\\s+E.S.E.\\b",           # "wind E.S.E."
+    "(?i)\\bwind\\s+East[-\\s]*Southeast\\b", # "wind East Southeast"
+    "(?i)\\bESE\\s+wind\\b",              # "ESE wind"
+    "(?i)\\bE.S.E.\\s+wind\\b",           # "E.S.E. wind"
+    "(?i)\\bEast[-\\s]*Southeast\\s+wind\\b" # "East Southeast wind"
+)
+
+## Patterns to capture "West Northwest" wind references ----
+WNW_wind <- c(
+    "(?i)\\bwind\\s+WNW\\b",              # "wind WNW"
+    "(?i)\\bwind\\s+W.N.W.\\b",           # "wind W.N.W."
+    "(?i)\\bwind\\s+West[-\\s]*Northwest\\b", # "wind West Northwest"
+    "(?i)\\bWNW\\s+wind\\b",              # "WNW wind"
+    "(?i)\\bW.N.W.\\s+wind\\b",           # "W.N.W. wind"
+    "(?i)\\bWest[-\\s]*Northwest\\s+wind\\b" # "West Northwest wind"
+)
+
+## Patterns to capture "West Southwest" wind references ----
+WSW_wind <- c(
+    "(?i)\\bwind\\s+WSW\\b",              # "wind WSW"
+    "(?i)\\bwind\\s+W.S.W.\\b",           # "wind W.S.W."
+    "(?i)\\bwind\\s+West[-\\s]*Southwest\\b", # "wind West Southwest"
+    "(?i)\\bWSW\\s+wind\\b",              # "WSW wind"
+    "(?i)\\bW.S.W.\\s+wind\\b",           # "W.S.W. wind"
+    "(?i)\\bWest[-\\s]*Southwest\\s+wind\\b" # "West Southwest wind"
+)
+
+wind_patterns <- list(
+    N = N_wind,
+    E = E_wind,
+    S = S_wind,
+    W = W_wind,
+    NE = NE_wind,
+    NW = NW_wind,
+    SE = SE_wind,
+    SW = SW_wind,
+    NNE = NNE_wind,
+    NNW = NNW_wind,
+    ENE = ENE_wind,
+    ESE = ESE_wind,
+    SSE = SSE_wind,
+    SSW = SSW_wind,
+    WNW = WNW_wind,
+    WSW = WSW_wind
+)
+
+```
+
+```{r}
+
+# Wind speed patterns 
+
+wind_speed_patterns <- "(?i)\\b(strong|powerful|heavy|intense|light|gentle|soft|calm|still|moderate|steady|gusty|blustery|variable|baffling|fresh|squally|brisk|stormy|tempestuous|strong|powerful|heavy|intense|light|gentle|soft|calm|still|moderate|steady|gusty|blustery|variable|calm|pleasant|fine|clear|light|fresh breeze|scant|fine|clam|clear|light|cleared of wind|smooth|baffling wind|eased|light air|fesh|dead calm|died out|hair|no wind|becalmed|not wind enough|baffling|becalmed|cleared up|very light air of wind|light air|perfectly calm|hazed up|wind out|hauling little|baffling|fresh|squally|brisk|stormy|tempestuous|moderate|fresh breeze|strong breeze|smart breeze|fresh blow good breeze|very fresh breeze|moderating|blowy|blowing|variable|breezing|whole sail breeze|changeable|fresh trade winds|high|peak breeze|mederate|fine|perfect|hauled down|steady|fine|wind increasing|breezed up|increasing|wind out|baffling and moderate|blustering|heavy blow|heavy|strong|rough|windstorm |big storm |heavy breeze|gale|stronger|tremendous|squall|hard|blowing a gale|hauled|squalls|hauling|terrific storm |blowing hard|squalls|perfect gale|squall|high winds|blew very heavy|fearfuly|blowed fearfuly|hauling out|rain squalls|growing rough|very moderate, calm|fresh breeze, rough|heavy blow, rough|sair|mode|wind increasing|wind out|squall, moderate|bills of laden wind|hauling little)\\b"
+
+
+## Patterns to find ----
+
+journal_data <- journals |>
+    mutate(
+        wind_direction = case_when(
+            str_detect(journal_entry, str_c(wind_patterns$N, collapse = "|")) ~ "N",
+            str_detect(journal_entry, str_c(wind_patterns$S, collapse = "|")) ~ "S",
+            str_detect(journal_entry, str_c(wind_patterns$E, collapse = "|")) ~ "E",
+            str_detect(journal_entry, str_c(wind_patterns$W, collapse = "|")) ~ "W",
+            str_detect(journal_entry, str_c(wind_patterns$NE, collapse = "|")) ~ "NE",
+            str_detect(journal_entry, str_c(wind_patterns$NW, collapse = "|")) ~ "NW",
+            str_detect(journal_entry, str_c(wind_patterns$SE, collapse = "|")) ~ "SE",
+            str_detect(journal_entry, str_c(wind_patterns$SW, collapse = "|")) ~ "SW",
+            str_detect(journal_entry, str_c(wind_patterns$NNE, collapse = "|")) ~ "NNE",
+            str_detect(journal_entry, str_c(wind_patterns$NNW, collapse = "|")) ~ "NNW",
+            str_detect(journal_entry, str_c(wind_patterns$SSE, collapse = "|")) ~ "SSE",
+            str_detect(journal_entry, str_c(wind_patterns$SSW, collapse = "|")) ~ "SSW",
+            str_detect(journal_entry, str_c(wind_patterns$ENE, collapse = "|")) ~ "ENE",
+            str_detect(journal_entry, str_c(wind_patterns$ESE, collapse = "|")) ~ "ESE",
+            str_detect(journal_entry, str_c(wind_patterns$WNW, collapse = "|")) ~ "WNW",
+            str_detect(journal_entry, str_c(wind_patterns$WSW, collapse = "|")) ~ "WSW",
+            TRUE ~ "No wind"
+        )
+    ) |>
+      mutate(
+        wind_mentioned = if_else(str_detect(journal_entry, "(?i)\\bwind\\b"), "Yes", "No")
+    )  |>
+  # mutate(wind_speed_description = str_c(str_extract_all(journal_entry, wind_speed_patterns))) |>
+  mutate(wind_speed_description = map_chr(str_extract_all(journal_entry, wind_speed_patterns), ~ str_c(.x, collapse=" "))) |>
+  mutate(wind_meteor = case_when(wind_direction == "N" ~ 0,
+                                  wind_direction == "NNE" ~ 22.5,
+                                  wind_direction == "NE" ~ 45,
+                                  wind_direction == "ENE" ~ 67.5,
+                                  wind_direction == "E" ~ 90,
+                                  wind_direction == "ESE" ~ 112.5,
+                                  wind_direction == "SE" ~ 135,
+                                  wind_direction == "SSE" ~ 157.5,
+                                  wind_direction == "S" ~ 180,
+                                  wind_direction == "SSW" ~ 202.5,
+                                  wind_direction == "SW" ~ 225,
+                                  wind_direction == "WSW" ~ 247.5,
+                                  wind_direction == "W" ~ 270,
+                                  wind_direction == "WNW" ~ 292.5,
+                                  wind_direction == "NW" ~ 315,
+                                  wind_direction == "NNW" ~ 337.5)) 
+  
+
+```
+
+## Location check
+
+```{r}
+location_data <- read_excel("/Users/francesleduke/Downloads/freelandbunker/data/location_coordinates.xlsx")
+
+location_data <- read_sheet('https://docs.google.com/spreadsheets/d/10BzzqJA_-lgcrh-M9dWPU1v0vqcZjxXiUpjT5AfsQPc/edit?gid=996642362#gid=996642362')
+
+location_coordinates <- location_data |>
+  select(location_list, latitude, longitude)
+
+local_places_coordinates <- location_data |>
+  select(local_place_list, 
+         local_place_latitude, 
+         local_place_longitude) |>
+  rename(latitude = local_place_latitude,
+         longitude = local_place_longitude)
+```
+
+## Long location data
+
+```{r}
+journal_long <- journal_data |>
+  separate_longer_delim(location, delim = ", ") |>
+  separate_longer_delim(location, delim = ",")
+
+journal_long_loc <- journal_long |>
+  left_join(location_coordinates, by = c("location" = "location_list"), relationship = "many-to-many")
+  
+```
+
+
+## Which rows are missing a wind direction?
+
+```{r}
+journal_wind <- journal_long_loc |>
+  select(date_mdy, month, journal_entry, wind_direction, wind_meteor, wind_mentioned, wind_speed_description, location, latitude.y, longitude.y)
+
+visdat::vis_miss(journal_wind)
+```
+
+
+
+## How frequently did different wind directions come up?
+
+```{r}
+
+journal_wind %>% 
+  count(wind_direction)
+
+# Which are missing a wind direction. Is any wind detected?
+
+improve_wind_search <- journal_wind |>
+  filter(wind_mentioned == "Yes" & wind_direction == "No wind") |>
+  distinct(journal_entry)
+
+improve_wind_speed_search <- journal_wind |>
+  filter(wind_mentioned == "Yes" & is.na(wind_speed_description)) |>
+  distinct(journal_entry)
+
+write_csv(improve_wind_search, file = "missing_wind.csv")
+
+write_csv(improve_wind_search, file = "missing_wind_speed.csv")
+
+#take month, year, and wind direction... make them into a graph. 
+# 
+# data$group <- sample(letters[1:3], 6676, replace = TRUE)
+# data$point_size <- runif(6676, 1, 5)
+# 
+# ggplot(journals_combined, aes(x="date_mdy", y="wind_direction_am", size=wt)) +
+#     geom_point(color="blue", size=1) +
+#     labs(title="Scatterplot of Wind Direction by Month", 
+#          x="month", 
+#          y="windirection") +
+# scale_size_continuous(range = c(1, 6676))
+# 
+
+```
+
+
+
+
+## Frances' Analysis Starts Here
+
+## Read-in updated wind-speed categorizations 
+
+```{r}
+
+head(journal_wind)
+
+head(improve_wind_search)
+
+head(improve_wind_speed_search)
+
+wind_speed_patterns <- read_excel("/Users/francesleduke/Downloads/freelandbunker/data/Beaufort Wind Cats.xlsx")
+
+
+```
+
+
+
+## Create a data frame 
+
+```{r}
+journal_wind_df <- journal_wind
+
+## Frances check: what might we be leaving out?
+
+
+journal_wind_df <- journal_wind |>
+  mutate(
+    wind_speed_knots = case_when(
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$twelve_knots)), collapse = "|")) ~ 12,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$eleven_knots)), collapse = "|")) ~ 11,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$ten_knots)), collapse = "|")) ~ 10,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$nine_knots)), collapse = "|")) ~ 9,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$eight_knots)), collapse = "|")) ~ 8,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$seven_knots)), collapse = "|")) ~ 7,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$six_knots)), collapse = "|")) ~ 6,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$five_knots)), collapse = "|")) ~ 5,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$four_knots)), collapse = "|")) ~ 4,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$three_knots)), collapse = "|")) ~ 3,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$two_knots)), collapse = "|")) ~ 2,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$one_knot)), collapse = "|")) ~ 1,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$zero_knots)), collapse = "|")) ~ 0,
+      TRUE ~ NA_real_
+    )
+  )
+
+journal_wind_df <- journal_wind_df |>
+  
+  # Convert meteorological wind direction to mathematical wind direction and make a new column 
+  
+  mutate(
+  wind_dir_math = 270 - wind_meteor) |>
+  
+  mutate(wind_dir_math_real = ifelse(wind_dir_math <= 0, wind_dir_math + 360, wind_dir_math)
+    ) |>
+  
+  # Convert wind direction (degrees) into radians 
+  
+  mutate(wind_dir_rad = wind_dir_math_real * (pi/180)) |>
+   
+  # Convert wind speed and direction into u and v vector components  
+   
+  mutate(u_vector = wind_speed_knots*(cos(wind_dir_rad))) |>
+
+  mutate(v_vector = wind_speed_knots*(sin(wind_dir_rad))) |>
+
+  # Calculate the magnitude of each vector 
+  
+  mutate(vector_magnitude = sqrt((u_vector^2)+(v_vector^2)))
+  
+```
+
+## Add wind conversions and convert to radians 
+
+```{r}
+
+journal_wind_df <- journal_wind_df |>
+ 
+   #convert meteor wind to math wind 
+  
+  mutate(wind_dir_math = 270 - wind_meteor) |>
+  
+  #if math wind is ≤ 0, add 360 
+  
+  mutate(wind_dir_math_real = ifelse(wind_dir_math <= 0, wind_dir_math + 360, wind_dir_math)) |>
+  
+  #convert to radians 
+  
+  mutate(wind_dir_rad = wind_dir_math_real * (pi / 180))
+
+ 
+```
+
+## Calculate u and v vectors 
+
+```{r}
+journal_wind_df <- journal_wind_df |>
+  mutate(u_vector = wind_speed_knots*(cos(wind_dir_rad))) 
+
+(journal_wind_df <- journal_wind_df |>
+  mutate(v_vector = wind_speed_knots*(sin(wind_dir_rad)))) 
+
+```
+## Calculate the magnitude of each vector 
+
+```{r}
+
+ journal_wind_df <- journal_wind_df |>
+  mutate(vector_magnitude = sqrt((u_vector^2)+(v_vector^2))) 
+
+```
+
+## Create a new column to represent months as numeric values, excluding NA values
+
+```{r}
+
+journal_wind_df <- journal_wind_df |>
+  filter(!is.na(month)) |>
+  mutate(
+    month_numeric = match(month, month.name)  # Match month names to numeric values
+  )
+
+```
+
+# Creating a beaufort column 
+```{r}
+
+#make a column using casewhen; casewhen wind speed is between x and y make beaufort be zero 
+
+journal_wind_df <- journal_wind_df |>
+  mutate(beaufort = case_when(
+    wind_speed_knots == 0 ~ 0,
+    wind_speed_knots == 1 ~ 1,
+    wind_speed_knots == 2 ~ 2,
+    wind_speed_knots == 3 ~ 3,
+    wind_speed_knots == 4 ~ 4,
+    wind_speed_knots == 5 ~ 5,
+    wind_speed_knots == 6 ~ 6,
+    wind_speed_knots == 7 ~ 7,
+    wind_speed_knots == 8 ~ 8,
+    wind_speed_knots == 9 ~ 9,
+    wind_speed_knots == 10 ~ 10,
+    wind_speed_knots == 11 ~ 11,
+    wind_speed_knots == 12 ~ 12,
+  TRUE ~ NA_real_   
+  ))
+
+```
+
+```{r}
+
+beaufort_grouped <- journal_wind_df |>
+  group_by(beaufort, wind_direction) |>
+  summarize(frequency = n()) 
+
+beaufort_grouped_math <- journal_wind_df |>
+  group_by(beaufort, wind_dir_math_real) |>
+  summarize(frequency = n()) 
+
+```
+
+```{r}
+
+ggplot(beaufort_grouped_math, aes(x = wind_dir_math_real, y = beaufort, fill = frequency)) +
+  geom_tile()
+
+```
+# How many instances of directional data with no speed?
+We could possibly go back in and see if we've missed anything on speed.
+
+```{r}
+
+# Rows 67 - 78 have NA wind speeds. Subtract Row 71: No Wind. 
+
+sum(beaufort_grouped$frequency[67:78]) - beaufort_grouped$frequency[71]
+
+```
+
+```{r}
+
+missing_speed <- subset(journal_wind_df, !is.na(wind_direction) & is.na(wind_speed_knots))
+view(missing_speed)
+
+```
+
+# Checking my math for distrubution table 
+```{r}
+
+sum(beaufort_grouped$frequency[1:65])
+
+# Doesn't match, however not counting intercardinals yet (NNE, ENE, etc.)
+
+```
+
+
+## Plot with animation by year 
+
+```{r}
+library(ggplot2)
+library(gganimate)
+library(gifski)
+library(lubridate)
+
+test <- journal_wind_df |>
+  drop_na(longitude.y, u_vector, latitude.y, v_vector) |> #drop rows containing missing values
+  mutate(longitude.y = as.numeric(longitude.y), #create longitude on x-axis 
+         latitude.y = as.numeric(latitude.y)) |> #create latitude axis 
+  mutate(year = lubridate::year(lubridate::as_date(date_mdy))) 
+  
+p <-  test |>
+ggplot() +
+  geom_segment(aes(x = longitude.y, 
+                   y = latitude.y, 
+                   xend = longitude.y + u_vector, yend = latitude.y + v_vector, 
+                   color = vector_magnitude), 
+               arrow = arrow(type = "closed", length = unit(0.1, "inches")), alpha = 0.3) +
+  theme_minimal() +
+  labs(x = "Longitude", y = "Latitude") +
+  ggtitle('Year {closest_state}') +
+  scale_color_viridis_c() +
+  transition_states(year) # Use transition_manual to control frames manually
+
+animate(p, renderer = gifski_renderer(), duration = 50, nframes = 500)
+
+
+  
+```
+
+# Trying to add day and month now # Laurie and Frances are here 
+
+```{r}
+library(ggplot2)
+library(gganimate)
+library(gifski)
+library(lubridate)
+library(dplyr)
+
+test <- journal_wind_df |>
+  drop_na(longitude.y, u_vector, latitude.y, v_vector) |>
+  mutate(longitude.y = as.numeric(longitude.y), 
+         latitude.y = as.numeric(latitude.y)) |>
+  mutate(month = month(lubridate::as_date(date_mdy), label = FALSE)) |>
+  mutate(year = year(lubridate::as_date(date_mdy))) |>
+  mutate(month_year = case_when(month > 9 ~ paste0(year, month),
+                                month < 10 ~ paste0(year, 0, month)))
+         
+# # Shift positions incrementally to simulate wind movement 1/2
+# test <- journal_wind_df %>%
+#   group_by(frame) %>%
+#   mutate(
+#     long_shifted = long + (u_vector * (frame / num_frames)), # Incrementally shift longitude
+#     lat_shifted = lat + (v_vector * (frame / num_frames))    # Incrementally shift latitude
+#   ) %>%
+#   ungroup()
+# # this code works when this chunk is not here 2/2
+
+p <- test |>
+  #filter(longitude.y < -20 & latitude.y < 20) |> ## If you wanted to make a bounding box for the GOM
+  ggplot() +
+  geom_segment(aes(x = longitude.y, 
+                   y = latitude.y, 
+                   xend = longitude.y + u_vector, 
+                   yend = latitude.y + v_vector, 
+                   color = vector_magnitude), 
+               arrow = arrow(type = "closed", length = unit(0.1, "inches")), 
+               alpha = 0.3) +
+  theme_minimal() +
+  labs(x = "Longitude", y = "Latitude") +
+  ggtitle('Month and Year: {closest_state}') +
+  scale_color_viridis_c() +
+  enter_fade() +
+  ease_aes('linear') +
+  transition_states(month_year, state_length = 1) # Use month and year for animation
+
+animate(p, renderer = gifski_renderer(), duration = 120, nframes = 100)
+
+```
+
+# Trying to simulate wind movement 
+
+```{r}
+num_frames <- 500
+
+test <- journal_wind_df |>
+  drop_na(longitude.y, u_vector, latitude.y, v_vector) |>
+  mutate(
+    longitude.y = as.numeric(longitude.y), 
+    latitude.y = as.numeric(latitude.y)
+  ) |>
+  mutate(month_year = factor(paste(year(lubridate::as_date(date_mdy)), 
+                                   month(lubridate::as_date(date_mdy), label = TRUE), 
+                                   sep = " "))) |>
+  crossing(frame = seq_len(num_frames)) |> # Add frame sequence
+  mutate(
+    long_shifted = longitude.y + (u_vector * (frame / num_frames)), # Incrementally shift longitude
+    lat_shifted = latitude.y + (v_vector * (frame / num_frames))    # Incrementally shift latitude
+  )
+
+p <- test |>
+  ggplot() +
+  geom_segment(aes(
+    x = long_shifted, 
+    y = lat_shifted, 
+    xend = long_shifted + u_vector, 
+    yend = lat_shifted + v_vector, 
+    color = vector_magnitude
+  ), 
+  arrow = arrow(type = "closed", length = unit(0.1, "inches")), 
+  alpha = 0.3) +
+  theme_minimal() +
+  labs(x = "Longitude", y = "Latitude") +
+  ggtitle('Month and Year: {closest_state}') +
+  scale_color_viridis_c() +
+  transition_states(frame, state_length = 1) # Use frame for animation
+
+animate(p, renderer = gifski_renderer(), duration = 50, nframes = num_frames)
+
+```
+
+
+# Plot without animation and save as a .jpg 
+
+```{r}
+library(ggplot2)
+library(gganimate)
+library(gifski)
+library(lubridate)
+
+test <- journal_wind_df |>
+  drop_na(longitude.y, u_vector, latitude.y, v_vector) |>
+  mutate(longitude.y = as.numeric(longitude.y),
+         latitude.y = as.numeric(latitude.y)) |>
+  mutate(year = lubridate::year(lubridate::as_date(date_mdy)))
+  
+test |>
+ggplot() +
+  geom_segment(aes(x = longitude.y, 
+                   y = latitude.y, 
+                   xend = longitude.y + u_vector, yend = latitude.y + v_vector, 
+                   color = vector_magnitude), 
+               arrow = arrow(type = "closed", length = unit(0.1, "inches")), alpha = 0.3) +
+  theme_minimal() +
+  labs(x = "Longitude", y = "Latitude") +
+  scale_color_viridis_c() +
+facet_wrap(~year)
+
+
+ggsave(filename = "wind_facets.jpg", width = 14, height = 7)
+  
+```
+
+```{r}
+
+test <- journal_wind_df |>
+  drop_na(longitude.y, u_vector, latitude.y, v_vector) |>
+  mutate(longitude.y = as.numeric(longitude.y),
+         latitude.y = as.numeric(latitude.y)) |>
+  mutate(year = lubridate::year(lubridate::as_date(date_mdy))) |>
+  filter(year == 1886)
+  
+  
+test |>
+ggplot() +
+  geom_segment(aes(x = longitude.y, 
+                   y = latitude.y, 
+                   xend = longitude.y + u_vector, yend = latitude.y + v_vector, 
+                   color = vector_magnitude), 
+               arrow = arrow(type = "closed", length = unit(0.1, "inches")), alpha = 0.3) +
+  theme_minimal() +
+  labs(x = "Longitude", y = "Latitude") +
+  scale_color_viridis_c() +
+facet_wrap(~year)
+
+
+ggsave(filename = "wind_facets.jpg", width = 14, height = 7)
+
+
+
+```
+
+```{r}
+
+test <- journal_wind_df |>
+  drop_na(longitude.y, u_vector, latitude.y, v_vector) |>
+  mutate(longitude.y = as.numeric(longitude.y),
+         latitude.y = as.numeric(latitude.y)) |>
+  mutate(year = lubridate::year(lubridate::as_date(date_mdy))) |>
+  filter(year == 1873)
+  
+  
+test |>
+ggplot() +
+  geom_segment(aes(x = longitude.y, 
+                   y = latitude.y, 
+                   xend = longitude.y + u_vector, yend = latitude.y + v_vector, 
+                   color = vector_magnitude), 
+               arrow = arrow(type = "closed", length = unit(0.1, "inches")), alpha = 0.3) +
+  theme_minimal() +
+  labs(x = "Longitude", y = "Latitude") +
+  scale_color_viridis_c() +
+facet_wrap(~year)
+
+
+ggsave(filename = "wind_facet_1873.jpg", width = 14, height = 7)
+
+```
+
+
+```{r}
+
+test <- journal_wind_df |>
+  drop_na(longitude.y, u_vector, latitude.y, v_vector) |>
+  mutate(longitude.y = as.numeric(longitude.y),
+         latitude.y = as.numeric(latitude.y)) |>
+  mutate(year = lubridate::year(lubridate::as_date(date_mdy))) |>
+  filter(year == 1874)
+  
+  
+test |>
+ggplot() +
+  geom_segment(aes(x = longitude.y, 
+                   y = latitude.y, 
+                   xend = longitude.y + u_vector, yend = latitude.y + v_vector, 
+                   color = vector_magnitude), 
+               arrow = arrow(type = "closed", length = unit(0.1, "inches")), alpha = 0.3) +
+  theme_minimal() +
+  labs(x = "Longitude", y = "Latitude") +
+  scale_color_viridis_c() +
+facet_wrap(~year)
+
+
+ggsave(filename = "wind_facet_1874.jpg", width = 14, height = 7)
+
+```
+
+
+```{r}
+
+test <- journal_wind_df |>
+  drop_na(longitude.y, u_vector, latitude.y, v_vector) |>
+  mutate(longitude.y = as.numeric(longitude.y),
+         latitude.y = as.numeric(latitude.y)) |>
+  mutate(year = lubridate::year(lubridate::as_date(date_mdy))) |>
+  filter(year == 1876)
+  
+  
+test |>
+ggplot() +
+  geom_segment(aes(x = longitude.y, 
+                   y = latitude.y, 
+                   xend = longitude.y + u_vector, yend = latitude.y + v_vector, 
+                   color = vector_magnitude), 
+               arrow = arrow(type = "closed", length = unit(0.1, "inches")), alpha = 0.3) +
+  theme_minimal() +
+  labs(x = "Longitude", y = "Latitude") +
+  scale_color_viridis_c() +
+facet_wrap(~year)
+
+
+ggsave(filename = "wind_facets.jpg", width = 14, height = 7)
+
+```
+
+
+
+
+
+
+# Fran working on plotting this from https://theoceancode.netlify.app/post/wind_vectors/
+```{r}
+
+library(tidyverse)
+library(scales)
+
+ggplot(data = journal_wind_df, aes(x = date, y = wind_speed_knots)) +
+  # Here we create the wind vectors as a series of segments with arrow tips
+    geom_segment(aes(x = date, xend = date + u_vector, y = 0, yend = v_vector), 
+                 arrow = arrow(length = unit(0.15, 'cm')), size = 0.5, alpha = 0.7) +
+  # I think adding points at the base of the vectors makes the figure easier to read
+    geom_point(aes(x = date, y = 0), alpha = 0.5, size = 1) +
+  # Changing the dates to better match the range shown on the x axis
+    scale_x_date(labels = date_format('%Y-%m-%d'), breaks = date_breaks('4 days')) +
+  # Change the y axis labels to make sense
+    scale_y_continuous(breaks = wind_speed_knots, labels = as.character(abs(y_axis)/date)) +
+  # Change the x and y axis labels
+    labs(x = NULL, y = 'Wind Speed (m/s)') +
+    coord_equal(ylim = c(min(y_axis/wind_scale), max(y_axis/wind_scale))) +
+    theme(axis.text.x = element_text(angle = 20, hjust = 0.4, vjust = 0.5, size = 8),
+          axis.text.y = element_text(size = 8))
+
+```
+
+
+
+## Time series plottin'
+
+```{r}
+require(ggplot2)
+require(scales)
+require(gridExtra)
+require(lubridate)
+
+## Ok so this creates each axis...
+
+dat <- data.frame(datetime = ISOdate(1885,1:12,1) +
+                     seq(0:23)*60*60, wind_speed = runif(24, 25, 75))
+
+# test <- journal_wind_df |>
+
+## create wind speed data
+dat$ws <- runif(nrow(dat), 0 , 15 )
+
+## create wind direction data
+dat$wd <- runif(nrow(dat), 0 , 360 )
+
+# define an end point for geom_segment
+dat$x.end <- dat$datetime + minutes(60)
+
+ggplot(data = dat, aes(x = datetime, y = pollutant)) + ##ok so this is what i'm not sure of, how do i put wind speed on the y axis?? bc right now these values are essentially random 
+  geom_line() +
+  geom_segment(data = dat,
+               linewidth = 1,
+               aes(x = datetime,
+                   xend = x.end,
+                   y = pollutant,
+                   yend = wd),
+               arrow = arrow(length = unit(0.5, "cm"))) +
+  theme()
+```
+## Plot time series 
+
+```{r}
+library(ggplot2)
+library(lubridate)
+
+# use data from my data frame
+
+journal_wind_df %>%
+  mutate(date_mdy = lubridate::ymd(date_mdy)) %>%
+  mutate(date_year = lubridate::year(date_mdy)) %>%
+  filter(date_year == 1880) %>%
+  #filter(date_mdy >= as.Date("1880-01-01") & date_mdy <= as.Date("1880-12-31")) %>%
+ggplot(aes(x = date_mdy, y = wind_speed_knots)) + # x-axis = date, y-axis = wind speed (wind speed over time graph ! )
+  geom_point(color = "blue", size = 0.5, alpha = 0.5) +  # creating a scatter plot
+  geom_segment(aes(
+    xend = date_mdy + u_vector * 0.01,   # adjust for horizontal (u_vector) movement (0.05 scaling factor should i change this??)
+    yend = wind_speed_knots + v_vector * 0.05),  # adjust for vertical (v_vector) movement 
+    arrow = arrow(length = unit(0.2, "cm")), 
+    color = "red") +  # wind direction arrows in red
+#  scale_x_datetime(date_labels = "%Y-%m", date_breaks = "2 months") +  # format X-axis and label with year and month 
+  labs(title = "Wind Vectors Over Time", x = "Year-Month", y = "Wind Speed (knots)") +
+  theme_minimal() 
+
+```
+# Making my time series into a slow reveal 
+
+```{r}
+library(ggplot2)
+library(lubridate)
+library(gganimate)
+
+# use data from my data frame
+
+journal_wind_df %>%
+  mutate(date_mdy = lubridate::ymd(date_mdy)) %>%
+  mutate(date_year = lubridate::year(date_mdy)) %>%
+  # filter(date_year < 1950) %>%
+  # filter(date_mdy >= as.Date("1873-10-08") & date_mdy <= as.Date("1874-04-13")) %>% # using arbitrary dates to test a smaller subset of data
+ggplot(aes(x = date_mdy, y = wind_speed_knots)) + # x-axis = date, y-axis = wind speed (wind speed over time graph ! )
+  geom_point(color = "blue", size = 0.5, alpha = 0.5) +  # creating a scatter plot
+  geom_segment(aes(
+    xend = date_mdy + u_vector * 0.01,   # adjust for horizontal (u_vector) movement (0.05 scaling factor should i change this??)
+    yend = wind_speed_knots + v_vector * 0.05),  # adjust for vertical (v_vector) movement 
+    arrow = arrow(length = unit(0.2, "cm")), 
+    color = "red") +  # wind direction arrows in red
+#  scale_x_datetime(date_labels = "%Y-%m", date_breaks = "2 months") +  # format X-axis and label with year and month 
+  labs(title = "Wind Vectors Over Time", x = "Year-Month", y = "Wind Speed (knots)") +
+  theme_minimal() +
+  transition_reveal(date_mdy)
+
+ animate
+```
+
+
+## Create a plot showing u and v components in a scatter
+
+```{r}
+library(ggplot2)
+library(lubridate)
+library(dplyr)
+
+
+journal_wind_df %>%
+  mutate(date_mdy = ymd(date_mdy)) %>%
+  mutate(date_year = year(date_mdy), date_month = month(date_mdy, label = TRUE)) %>%  # Extract year and month
+  filter(date_year == 1873) %>%  
+  ggplot(aes(x = date_mdy, y = 0)) +  
+  geom_point(color = "blue", size = 0.5, alpha = 0.5) +  
+  geom_segment(aes(
+    xend = date_mdy + u_vector * 0.75,   
+    yend = v_vector * 0.75),  
+    arrow = arrow(length = unit(0.2, "cm")), 
+    color = "red") +  
+  # scale_x_date(date_labels = "%b", date_breaks = "1 month") +  # Format X-axis to show months
+  labs(title = "Wind Vectors Over Time (1873)", x = "Month", y = "Wind Speed (knots)") +
+  theme_minimal()
+
+journal_wind_df %>%
+  ggplot(aes(x= u_vector, y = v_vector)) + geom_point()
+# journal_wind_df %>%
+#   mutate(date_mdy = ymd(date_mdy)) %>%
+#   mutate(date_year = year(date_mdy), date_month = month(date_mdy, label = TRUE)) %>%  # Extract year and month
+#   filter(date_year == 1873) %>%  
+#   mutate (date_xend = date_mdy + u_vector * 0.5) %>% 
+#   mutate (date_yend = v_vector * 0.3) %>% 
+#   select(date_xend, date_yend, date_mdy)
+
+
+
+
+```
+
+See this tutorial for adding a label to the plot: https://stackoverflow.com/questions/41728575/how-to-add-specific-text-for-each-frame-of-an-animation-in-r
+
+
+```{r}
+journal_wind_df %>%
+  mutate(date_mdy = lubridate::ymd(date_mdy)) %>%
+  mutate(date_year = lubridate::year(date_mdy),
+         date_month = lubridate::month(date_mdy)) %>%
+  drop_na(wind_speed_knots) %>%
+  filter(date_year < 1950) %>%
+  group_by(date_year, date_month, wind_speed_knots) %>%
+  summarize(num_wind_reported = n()) %>%
+  mutate(year_month = paste(date_year, date_month, "15", sep = "-"))# %>%
+ # ggplot(aes(x = lubridate::ymd(year_month), y = num_wind_reported, group = wind_speed_knots, color = wind_speed_knots)) +
+ # geom_line() # +
+  #facet_wrap(~wind_speed_knots)
+```
+
+# New term starting to work on a time series that makes more sense - experimenting witg plotting magnitude and direction?
+```{r}
+
+library(ggplot2)
+library(lubridate)
+
+# use data from my data frame
+
+journal_wind_df %>%
+  mutate(date_mdy = lubridate::ymd(date_mdy)) %>%
+  mutate(date_year = lubridate::year(date_mdy)) %>%
+  filter(date_year == 1880) %>%
+ggplot(aes(x = date_mdy, y = wind_speed_knots)) + # x-axis = date, y-axis = wind speed (wind speed over time graph ! )
+  geom_point(color = "blue", size = 0.5, alpha = 0.5) +  # creating a scatter plot
+  geom_segment(aes(
+    xend = date_mdy + vector_magnitude * 0.01,   # adjust for horizontal (u_vector) movement (0.05 scaling factor should i change this??)
+    yend = wind_speed_knots + wind_dir_math_real * 0.05),  # adjust for vertical (v_vector) movement 
+    arrow = arrow(length = unit(0.2, "cm")), 
+    color = "red") +  # wind direction arrows in red
+#  scale_x_datetime(date_labels = "%Y-%m", date_breaks = "2 months") +  # format X-axis and label with year and month 
+  labs(title = "Wind Vectors Over Time", x = "Year-Month", y = "Wind Speed (knots)") +
+  theme_minimal() 
+
+```
+
+## Next year 
+
+# working with https://theoceancode.netlify.app/post/wind_vectors/
+
+```{r}
+library(tidyverse)
+library(scales)
+
+
+journal_wind_df %>%
+  mutate(date_mdy = lubridate::ymd(date_mdy)) %>%
+  mutate(date_year = lubridate::year(date_mdy)) %>%
+  filter(date_year == 1880) %>%
+  ggplot(aes(x = longitude.y, y = latitude.y)) +
+  geom_segment(aes(
+    xend = longitude.y + u_vector * 0.025,
+    yend = latitude.y + v_vector * 0.025
+  ),
+  arrow = arrow(length = unit(0.01, "cm")),
+  size = 0.25
+  ) +
+  coord_fixed() +
+  facet_wrap(~ date_mdy) +  
+  theme_minimal()
+
+```
+
+
+```{r}
+wind_scale <- 1
+y_axis <- seq(-5, 5, 5)
+
+ggplot(data = journal_wind_df, aes(x = date, y = y_axis)) +
+  # Here we create the wind vectors as a series of segments with arrow tips
+    geom_segment(aes(x = date, xend = date + u*wind_scale, y = 0, yend = v*wind_scale), 
+                 arrow = arrow(length = unit(0.15, 'cm')), size = 0.5, alpha = 0.7) +
+  # I think adding points at the base of the vectors makes the figure easier to read
+    geom_point(aes(x = date, y = 0), alpha = 0.5, size = 1) +
+  # Changing the dates to better match the range shown on the x axis
+    scale_x_date(labels = date_format('%Y-%m-%d'), breaks = date_breaks('4 days')) +
+  # Change the y axis labels to make sense
+    scale_y_continuous(breaks = y_axis, labels = as.character(abs(y_axis)/wind_scale)) +
+  # Change the x and y axis labels
+    labs(x = NULL, y = 'Wind Speed (m/s)') +
+    coord_equal(ylim = c(min(y_axis/wind_scale), max(y_axis/wind_scale))) +
+    theme(axis.text.x = element_text(angle = 20, hjust = 0.4, vjust = 0.5, size = 8),
+          axis.text.y = element_text(size = 8))
+```
+
+
+```{r}
+library(ggplot2)
+library(lubridate)
+
+# use data from my data frame
+
+journal_wind_df %>%
+  mutate(date_mdy = lubridate::ymd(date_mdy)) %>%
+  mutate(date_year = lubridate::year(date_mdy)) %>%
+  filter(date_year == 1880) %>%
+  #filter(date_mdy >= as.Date("1880-01-01") & date_mdy <= as.Date("1880-12-31")) %>%
+ggplot(aes(x = date_mdy, y = wind_speed_knots)) + # x-axis = date, y-axis = wind speed (wind speed over time graph ! )
+  geom_point(color = "blue", size = 0.5, alpha = 0.5) +  # creating a scatter plot
+  geom_segment(aes(
+    xend = date_mdy + u_vector * 0.01,   # adjust for horizontal (u_vector) movement (0.05 scaling factor should i change this??)
+    yend = wind_speed_knots + v_vector * 0.05),  # adjust for vertical (v_vector) movement 
+    arrow = arrow(length = unit(0.2, "cm")), 
+    color = "red") +  # wind direction arrows in red
+#  scale_x_datetime(date_labels = "%Y-%m", date_breaks = "2 months") +  # format X-axis and label with year and month 
+  labs(title = "Wind Vectors Over Time", x = "Year-Month", y = "Wind Speed (knots)") +
+  theme_minimal() 
+
+```
+
+
+
