@@ -637,8 +637,6 @@ sum(beaufort_grouped$frequency[67:78]) - beaufort_grouped$frequency[71]
 
 ```
 
-# Create a dataframe pulling rows with mentioned wind direction but no speed
-
 ```{r}
 
 missing_speed <- subset(journal_wind_df, !is.na(wind_direction) & is.na(wind_speed_knots))
