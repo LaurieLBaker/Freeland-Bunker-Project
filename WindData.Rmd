@@ -340,7 +340,7 @@ journal_data <- journals |>
       mutate(
         wind_mentioned = if_else(str_detect(journal_entry, "(?i)\\bwind\\b"), "Yes", "No")
     )  |>
-  # mutate(wind_speed_description = str_c(str_extract_all(journal_entry, wind_speed_patterns))) |>
+  
   mutate(wind_speed_description = map_chr(str_extract_all(journal_entry, wind_speed_patterns), ~ str_c(.x, collapse=" "))) |>
   mutate(wind_meteor = case_when(wind_direction == "N" ~ 0,
                                   wind_direction == "NNE" ~ 22.5,
@@ -425,17 +425,6 @@ write_csv(improve_wind_search, file = "missing_wind.csv")
 
 write_csv(improve_wind_search, file = "missing_wind_speed.csv")
 
-#take month, year, and wind direction... make them into a graph. 
-# 
-# data$group <- sample(letters[1:3], 6676, replace = TRUE)
-# data$point_size <- runif(6676, 1, 5)
-# 
-# ggplot(journals_combined, aes(x="date_mdy", y="wind_direction_am", size=wt)) +
-#     geom_point(color="blue", size=1) +
-#     labs(title="Scatterplot of Wind Direction by Month", 
-#          x="month", 
-#          y="windirection") +
-# scale_size_continuous(range = c(1, 6676))
 # 
 
 ```
@@ -491,13 +480,12 @@ wind_speed_patterns <- read_excel("/Users/francesleduke/Downloads/freelandbunker
 ```
 
 
-## Create a data frame # TESTING TO SEE IF THIS UPDATE SHOWS ON GIT
+## Create a data frame for wind
 
 ```{r}
 journal_wind_df <- journal_wind
 
 ## Frances check: what might we be leaving out?
-
 
 journal_wind_df <- journal_wind |>
   mutate(
@@ -682,6 +670,18 @@ sum(beaufort_grouped$frequency[1:65])
 # Doesn't match, however not counting intercardinals yet (NNE, ENE, etc.)
 
 ```
+# Pulling lines that have multiple wind descriptions recorded 
+
+```{r}
+
+wind_description_multiple <- journal_wind_df %>%
+  filter(!is.na(journal_wind_df$wind_speed_description),
+         wind_speed_description != "",
+         str_detect(wind_speed_description, "\\s"))
+         
+
+```
+
 
 
 ## Plot with animation by year 
