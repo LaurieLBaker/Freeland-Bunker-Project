@@ -691,6 +691,23 @@ wind_description_multiple <- journal_wind_df %>%
 
 ```
 
+# Make a dataframe from main (journal_wind_df) showing rows with mentioned wind = yes only. Using to investigate "hauled" issue 
+
+```{r}
+
+yes_wind_mentioned <- journal_wind_df %>%
+  filter(wind_mentioned == c("Yes"))
+
+# Show only entries with "hauled"
+
+hauled_yes_wind_mentioned <- journal_wind_df %>%
+  filter(
+    wind_mentioned == "Yes",
+    str_detect(journal_entry, regex("hauled", ignore_case = TRUE))
+  )
+
+```
+
 
 ## Plot with animation by year 
 
