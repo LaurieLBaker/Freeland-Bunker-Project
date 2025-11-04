@@ -443,7 +443,7 @@ head(improve_wind_search)
 
 head(improve_wind_speed_search)
 
-wind_speed_patterns <- read_excel("/Users/francesleduke/Downloads/freelandbunker/data/Beaufort Wind Cats.xlsx")
+wind_speed_patterns <- read_excel("/Users/francesleduke/Downloads/freelandbunker copy/data/Beaufort Wind Cats.xlsx")
 
 
 ```
@@ -623,17 +623,24 @@ journal_wind_df <- journal_wind_df |>
 
 ```
 
+
+# Make a dataframe to view beaufort frequencies: How often did x beaufort level come up? 
+
 ```{r}
 
+# Group for cardinal representation 
 beaufort_grouped <- journal_wind_df |>
   group_by(beaufort, wind_direction) |>
   summarize(frequency = n()) 
 
+# Group for mathematical representation 
 beaufort_grouped_math <- journal_wind_df |>
   group_by(beaufort, wind_dir_math_real) |>
   summarize(frequency = n()) 
 
 ```
+
+# Plot a frequency 'heat map'
 
 ```{r}
 
@@ -643,6 +650,7 @@ ggplot(beaufort_grouped_math, aes(x = wind_dir_math_real, y = beaufort, fill = f
 ```
 
 # How many instances of directional data with no speed?
+
 We could possibly go back in and see if we've missed anything on speed.
 
 ```{r}
@@ -670,6 +678,7 @@ sum(beaufort_grouped$frequency[1:65])
 # Doesn't match, however not counting intercardinals yet (NNE, ENE, etc.)
 
 ```
+
 # Pulling lines that have multiple wind descriptions recorded 
 
 ```{r}
@@ -681,7 +690,6 @@ wind_description_multiple <- journal_wind_df %>%
          
 
 ```
-
 
 
 ## Plot with animation by year 
