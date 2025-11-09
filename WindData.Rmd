@@ -706,6 +706,11 @@ hauled_yes_wind_mentioned <- journal_wind_df %>%
     str_detect(journal_entry, regex("hauled", ignore_case = TRUE))
   )
 
+# Show me rows with direction and speed 
+
+hauled_wind_yes_direction <- hauled_yes_wind_mentioned  %>%
+  filter(wind_direction != "No Wind", ignore_case = TRUE)
+
 ```
 
 
