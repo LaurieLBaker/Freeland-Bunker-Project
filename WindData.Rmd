@@ -40,6 +40,7 @@ library(naniar)
 library(magrittr) 
 library(dplyr) 
 library(readxl)
+library(writexl)
 ```
 
 ## Read in journals data
@@ -222,6 +223,24 @@ NNW_wind <- c(
     "(?i)\\bN.N.W.\\s+wind\\b",           # "N.N.W. wind"
     "(?i)\\bNorth[-\\s]*Northwest\\s+wind\\b" # "North Northwest wind"
 )
+
+
+NW_wind <- c(
+    "(?i)\\bwind\\s+N[.\\s-]*W\\b",                 # "wind NW", "wind N.W.", "wind N W"
+    "(?i)\\bwind\\s+North[-\\s]*West\\b",           # "wind North West" or "wind Northwest"
+    "(?i)\\bN[.\\s-]*W\\s+wind\\b",                 # "N.W. wind", "N W wind"
+    "(?i)\\bNorth[-\\s]*West\\s+wind\\b",           # "North West wind"
+    "(?i)\\bwind\\s+from\\s+N[.\\s-]*W\\b",         # "wind from N.W."
+    "(?i)\\bwind\\s+from\\s+North[-\\s]*West\\b",    # "wind from North West" 
+    "(?i)\\bwind\\s+N[.\\s-]*W\\b",                 # "wind NW", "wind N.W.", "wind N W"
+    "(?i)\\bwind\\s+North[-\\s]*West\\b",           # "wind North West" or "wind Northwest"
+    "(?i)\\bN[.\\s-]*W\\s+wind\\b",                 # "N.W. wind", "N W wind"
+    "(?i)\\bNorth[-\\s]*West\\s+wind\\b",           # "North West wind"
+    "(?i)\\bwind\\s+from\\s+N[.\\s-]*W\\b",         # "wind from N.W."
+    "(?i)\\bwind\\s+from\\s+North[-\\s]*West\\b"    # "wind from North West"
+)
+
+
 
 ## Patterns to capture "South Southeast" wind references ----
 SSE_wind <- c(
@@ -711,7 +730,34 @@ hauled_yes_wind_mentioned <- journal_wind_df %>%
 hauled_wind_yes_direction <- hauled_yes_wind_mentioned  %>%
   filter(wind_direction != "No Wind", ignore_case = TRUE)
 
+hauled_wind_yes_direction <- hauled_wind_yes_direction  %>%
+  filter(wind_direction != "No wind", ignore_case = TRUE)
+
+# Write this dataframe to excel - will use generative AI to determine where he's talking about wood and where he's talking about wind 
+
+write_xlsx(hauled_wind_yes_direction, "hauled_wind_yes_direction.xlsx")
+
+# Find where he's explicitly saying "wind hauled"
+
+wind_hauling <- journal_wind_df %>%
+  filter(grepl("wind hauled", journal_entry, ignore.case = TRUE))
+
+# # View them
+# wind_hauling$journal_entry
+
+
+
+
 ```
+
+
+
+```{r}
+hauled_wind_yes_direction$journal_entry[c(1, 2, 3, 4, 5,6,7,8,9,10)]
+
+```
+
+
 
 
 ## Plot with animation by year 
