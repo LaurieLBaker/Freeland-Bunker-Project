@@ -109,7 +109,9 @@ N_wind <- c(
     "(?i)\\bN.\\s+wind\\b",              # "N. wind"
     "(?i)\\bNorth\\s+to\\s+East\\b",     # "North to East"
     "(?i)\\bwind\\s+from\\s+North\\b",   # "wind from North"
-    "(?i)\\bwind\\s+Northerly.\\b"       # "wind Northerly." with period variation
+    "(?i)\\bwind\\s+Northerly.\\b",       # "wind Northerly." with period variation
+    "(?i)\\bwind\\s*N(?:orth)?(?:\\.\\s*)?(?:ward)?\\b" # Weird formats or "ward" spelling e.g. "Northward"
+
 )
 
 ## Patterns to capture "East" wind references ----
@@ -125,7 +127,9 @@ E_wind <- c(
     "(?i)\\bE.\\s+wind\\b",               # "E. wind" with period variation
     "(?i)\\bEast\\s+to\\s+South\\b",      # "East to South"
     "(?i)\\bwind\\s+from\\s+East\\b",     # "wind from East"
-    "(?i)\\bwind\\s+Easterly.\\b"         # "wind Easterly." with period variation
+    "(?i)\\bwind\\s+Easterly.\\b",         # "wind Easterly." with period variation
+    "(?i)\\bwind\\s*E(?:ast)?(?:\\.\\s*)?(?:ward)?\\b" # Weird formats or "ward" spelling e.g. "Eastward"
+
 )
 
 ## Patterns to capture "South" wind references ----
@@ -141,7 +145,9 @@ S_wind <- c(
     "(?i)\\bS.\\s+wind\\b",               # "S. wind" with period variation
     "(?i)\\bSouth\\s+to\\s+East\\b",      # "South to East"
     "(?i)\\bwind\\s+from\\s+South\\b",    # "wind from South"
-    "(?i)\\bwind\\s+Southerly.\\b"        # "wind Southerly." with period variation
+    "(?i)\\bwind\\s+Southerly.\\b",        # "wind Southerly." with period variation
+    "(?i)\\bwind\\s*S(?:outh)?(?:\\.\\s*)?(?:ward)?\\b" # Weird formats or "ward" spelling e.g. "Southward"
+
 )
 
 ## Patterns to capture "West" wind references ----
@@ -157,7 +163,9 @@ W_wind <- c(
     "(?i)\\bW.\\s+wind\\b",              # "W. wind" with period variation
     "(?i)\\bWest\\s+to\\s+North\\b",     # "West to North"
     "(?i)\\bwind\\s+from\\s+West\\b",    # "wind from West"
-    "(?i)\\bwind\\s+Westerly.\\b"        # "wind Westerly." with period variation
+    "(?i)\\bwind\\s+Westerly.\\b",        # "wind Westerly." with period variation
+    "(?i)\\bwind\\s*W(?:est)?(?:\\.\\s*)?(?:ward)?\\b" # Weird formats or "ward" spelling e.g. "Westward"
+
 )
 
 ## Patterns to capture "Northeast" wind references ----
@@ -168,7 +176,8 @@ NE_wind <- c(
     "(?i)\\bwind\\s+North[-\\s]*East\\b", # "wind North East"
     "(?i)\\bNE\\s+wind\\b",               # "NE wind"
     "(?i)\\bN.E.\\s+wind\\b",             # "N.E. wind"
-    "(?i)\\bNortheast\\s+wind\\b"         # "Northeast wind"
+    "(?i)\\bNortheast\\s+wind\\b",         # "Northeast wind"
+    "(?i)\\bwind\\s*N(?:orth)?(?:\\.|\\s*)?E(?:ast)?(?:\\.|\\s*)?(?:ward)?\\b" # Weird formats 
 )
 
 ## Patterns to capture "Northwest" wind references ----
@@ -179,7 +188,9 @@ NW_wind <- c(
     "(?i)\\bwind\\s+North[-\\s]*West\\b", # "wind North West"
     "(?i)\\bNW\\s+wind\\b",               # "NW wind"
     "(?i)\\bN.W.\\s+wind\\b",             # "N.W. wind"
-    "(?i)\\bNorthwest\\s+wind\\b"         # "Northwest wind"
+    "(?i)\\bNorthwest\\s+wind\\b",         # "Northwest wind"
+    "(?i)\\bwind\\s*N(?:orth)?(?:\\.|\\s*)?W(?:est)?(?:\\.|\\s*)?(?:ward)?\\b" # Weird formats 
+   
 )
 
 ## Patterns to capture "Southeast" wind references ----
@@ -190,7 +201,10 @@ SE_wind <- c(
     "(?i)\\bwind\\s+South[-\\s]*East\\b", # "wind South East"
     "(?i)\\bSE\\s+wind\\b",               # "SE wind"
     "(?i)\\bS.E.\\s+wind\\b",             # "S.E. wind"
-    "(?i)\\bSoutheast\\s+wind\\b"         # "Southeast wind"
+    "(?i)\\bSoutheast\\s+wind\\b",        # "Southeast wind"
+    "(?i)\\bwind\\s*S(?:outh)?(?:\\.|\\s*)?E(?:ast)?(?:\\.|\\s*)?(?:ward)?\\b" # Weird formats
+
+    
 )
 
 ## Patterns to capture "Southwest" wind references ----
@@ -201,7 +215,9 @@ SW_wind <- c(
     "(?i)\\bwind\\s+South[-\\s]*West\\b", # "wind South West"
     "(?i)\\bSW\\s+wind\\b",               # "SW wind"
     "(?i)\\bS.W.\\s+wind\\b",             # "S.W. wind"
-    "(?i)\\bSouthwest\\s+wind\\b"         # "Southwest wind"
+    "(?i)\\bSouthwest\\s+wind\\b",         # "Southwest wind"
+    "(?i)\\bwind\\s*S(?:outh)?(?:\\.|\\s*)?W(?:est)?(?:\\.|\\s*)?(?:ward)?\\b" # Weird formats 
+
 )
 
 ## Patterns to capture "North Northeast" wind references ----
@@ -211,7 +227,10 @@ NNE_wind <- c(
     "(?i)\\bwind\\s+North[-\\s]*Northeast\\b", # "wind North Northeast"
     "(?i)\\bNNE\\s+wind\\b",              # "NNE wind"
     "(?i)\\bN.N.E.\\s+wind\\b",           # "N.N.E. wind"
-    "(?i)\\bNorth[-\\s]*Northeast\\s+wind\\b" # "North Northeast wind"
+    "(?i)\\bNorth[-\\s]*Northeast\\s+wind\\b", # "North Northeast wind"
+    "(?i)\\bwind\\s*N(?:\\.|\\s*)?N(?:\\.|\\s*)?E(?:\\.|\\s*)?(?:ward)?\\b" # Weird formats 
+
+
 )
 
 ## Patterns to capture "North Northwest" wind references ----
@@ -221,7 +240,9 @@ NNW_wind <- c(
     "(?i)\\bwind\\s+North[-\\s]*Northwest\\b", # "wind North Northwest"
     "(?i)\\bNNW\\s+wind\\b",              # "NNW wind"
     "(?i)\\bN.N.W.\\s+wind\\b",           # "N.N.W. wind"
-    "(?i)\\bNorth[-\\s]*Northwest\\s+wind\\b" # "North Northwest wind"
+    "(?i)\\bNorth[-\\s]*Northwest\\s+wind\\b", # "North Northwest wind"
+    "(?i)\\bwind\\s*N(?:\\.|\\s*)?N(?:\\.|\\s*)?W(?:\\.|\\s*)?(?:ward)?\\b" # Weird formats 
+
 )
 
 
@@ -237,7 +258,9 @@ NW_wind <- c(
     "(?i)\\bN[.\\s-]*W\\s+wind\\b",                 # "N.W. wind", "N W wind"
     "(?i)\\bNorth[-\\s]*West\\s+wind\\b",           # "North West wind"
     "(?i)\\bwind\\s+from\\s+N[.\\s-]*W\\b",         # "wind from N.W."
-    "(?i)\\bwind\\s+from\\s+North[-\\s]*West\\b"    # "wind from North West"
+    "(?i)\\bwind\\s+from\\s+North[-\\s]*West\\b",    # "wind from North West"
+    "(?i)\\bwind\\s*N(?:orth)?(?:\\.|\\s*)?W(?:est)?(?:\\.|\\s*)?(?:ward)?\\b" # Weird formats 
+
 )
 
 
@@ -249,7 +272,9 @@ SSE_wind <- c(
     "(?i)\\bwind\\s+South[-\\s]*Southeast\\b", # "wind South Southeast"
     "(?i)\\bSSE\\s+wind\\b",              # "SSE wind"
     "(?i)\\bS.S.E.\\s+wind\\b",           # "S.S.E. wind"
-    "(?i)\\bSouth[-\\s]*Southeast\\s+wind\\b" # "South Southeast wind"
+    "(?i)\\bSouth[-\\s]*Southeast\\s+wind\\b", # "South Southeast wind"
+    "(?i)\\bwind\\s*S(?:\\.|\\s*)?S(?:\\.|\\s*)?E(?:\\.|\\s*)?(?:ward)?\\b" # Weird formats 
+
 )
 
 ## Patterns to capture "South Southwest" wind references ----
@@ -259,7 +284,9 @@ SSW_wind <- c(
     "(?i)\\bwind\\s+South[-\\s]*Southwest\\b", # "wind South Southwest"
     "(?i)\\bSSW\\s+wind\\b",              # "SSW wind"
     "(?i)\\bS.S.W.\\s+wind\\b",           # "S.S.W. wind"
-    "(?i)\\bSouth[-\\s]*Southwest\\s+wind\\b" # "South Southwest wind"
+    "(?i)\\bSouth[-\\s]*Southwest\\s+wind\\b", # "South Southwest wind"
+    "(?i)\\bwind\\s*S(?:\\.|\\s*)?S(?:\\.|\\s*)?W(?:\\.|\\s*)?(?:ward)?\\b" # Weird formats 
+
 )
 
 
@@ -270,7 +297,11 @@ ENE_wind <- c(
     "(?i)\\bwind\\s+East[-\\s]*Northeast\\b", # "wind East Northeast"
     "(?i)\\bENE\\s+wind\\b",              # "ENE wind"
     "(?i)\\bE.N.E.\\s+wind\\b",           # "E.N.E. wind"
-    "(?i)\\bEast[-\\s]*Northeast\\s+wind\\b" # "East Northeast wind"
+    "(?i)\\bEast[-\\s]*Northeast\\s+wind\\b", # "East Northeast wind"
+    "(?i)\\bwind\\s*E(?:\\.|\\s*)?N(?:\\.|\\s*)?E(?:\\.|\\s*)?(?:ward)?\\b"  # Weird formats 
+   
+
+
 )
 
 
@@ -281,7 +312,9 @@ ESE_wind <- c(
     "(?i)\\bwind\\s+East[-\\s]*Southeast\\b", # "wind East Southeast"
     "(?i)\\bESE\\s+wind\\b",              # "ESE wind"
     "(?i)\\bE.S.E.\\s+wind\\b",           # "E.S.E. wind"
-    "(?i)\\bEast[-\\s]*Southeast\\s+wind\\b" # "East Southeast wind"
+    "(?i)\\bEast[-\\s]*Southeast\\s+wind\\b", # "East Southeast wind"
+    "(?i)\\bwind\\s*E(?:\\.|\\s*)?S(?:\\.|\\s*)?E(?:\\.|\\s*)?(?:ward)?\\b" # Weird formats 
+
 )
 
 ## Patterns to capture "West Northwest" wind references ----
@@ -291,7 +324,9 @@ WNW_wind <- c(
     "(?i)\\bwind\\s+West[-\\s]*Northwest\\b", # "wind West Northwest"
     "(?i)\\bWNW\\s+wind\\b",              # "WNW wind"
     "(?i)\\bW.N.W.\\s+wind\\b",           # "W.N.W. wind"
-    "(?i)\\bWest[-\\s]*Northwest\\s+wind\\b" # "West Northwest wind"
+    "(?i)\\bWest[-\\s]*Northwest\\s+wind\\b", # "West Northwest wind"
+    "(?i)\\bwind\\s*W(?:\\.|\\s*)?N(?:\\.|\\s*)?W(?:\\.|\\s*)?(?:ward)?\\b" # Weird formats 
+
 )
 
 ## Patterns to capture "West Southwest" wind references ----
@@ -301,8 +336,12 @@ WSW_wind <- c(
     "(?i)\\bwind\\s+West[-\\s]*Southwest\\b", # "wind West Southwest"
     "(?i)\\bWSW\\s+wind\\b",              # "WSW wind"
     "(?i)\\bW.S.W.\\s+wind\\b",           # "W.S.W. wind"
-    "(?i)\\bWest[-\\s]*Southwest\\s+wind\\b" # "West Southwest wind"
+    "(?i)\\bWest[-\\s]*Southwest\\s+wind\\b", # "West Southwest wind"
+    "(?i)\\bwind\\s*W(?:\\.|\\s*)?S(?:\\.|\\s*)?W(?:\\.|\\s*)?(?:ward)?\\b" # Weird formats 
+
 )
+
+
 
 wind_patterns <- list(
     N = N_wind,
@@ -353,13 +392,25 @@ journal_data <- journals |>
             str_detect(journal_entry, str_c(wind_patterns$ESE, collapse = "|")) ~ "ESE",
             str_detect(journal_entry, str_c(wind_patterns$WNW, collapse = "|")) ~ "WNW",
             str_detect(journal_entry, str_c(wind_patterns$WSW, collapse = "|")) ~ "WSW",
+            str_detect(journal_entry, direction_word_regex) ~ "WARD",
+
             TRUE ~ "No wind"
         )
     ) |>
       mutate(
         wind_mentioned = if_else(str_detect(journal_entry, "(?i)\\bwind\\b"), "Yes", "No")
     )  |>
-  
+ 
+   mutate(
+    wind_direction = case_when(
+        wind_direction == "WARD" & str_detect(journal_entry, "(?i)south") ~ "S",
+        wind_direction == "WARD" & str_detect(journal_entry, "(?i)east")  ~ "E",
+        wind_direction == "WARD" & str_detect(journal_entry, "(?i)north") ~ "N",
+        wind_direction == "WARD" & str_detect(journal_entry, "(?i)west")  ~ "W",
+        TRUE ~ wind_direction
+    )
+) |>
+
   mutate(wind_speed_description = map_chr(str_extract_all(journal_entry, wind_speed_patterns), ~ str_c(.x, collapse=" "))) |>
   mutate(wind_meteor = case_when(wind_direction == "N" ~ 0,
                                   wind_direction == "NNE" ~ 22.5,
@@ -467,36 +518,6 @@ wind_speed_patterns <- read_excel("/Users/francesleduke/Downloads/freelandbunker
 
 ```
 
-
-```{r}
-## Run all the code chunks above with the upside-down play button
-
-# head(journal_wind)
-# 
-# head(improve_wind_search)
-# 
-# head(improve_wind_speed_search)
-
-## Frances - you can add more Wind Speed Patterns here
-
-# wind_speed_patterns <- "(?i)\\b(strong|powerful|heavy|intense|light|gentle|soft|calm|still|moderate|steady|gusty|blustery|variable|calm|pleasant|fine|clear|light|fresh breeze|scant|fine|clam|clear|light|cleared of wind|smooth|baffling wind|eased|light air|fesh|dead calm|died out|hair|no wind|becalmed|not wind enough|baffling|becalmed|cleared up|very light air of wind|light air|perfectly calm|hazed up|wind out|hauling little|baffling|fresh|squally|brisk|stormy|tempestuous|moderate|fresh breeze|strong breeze|smart breeze|fresh blow good breeze|very fresh breeze|moderating|blowy|blowing|variable|breezing|whole sail breeze|changeable|fresh trade winds|high|peak breeze|mederate|fine|perfect|hauled down|steady|fine|wind increasing|breezed up|increasing|wind out|baffling and moderate|blustering|heavy blow|heavy|strong|rough|windstorm |big storm |heavy breeze|gale|stronger|tremendous|squall|hard|blowing a gale|hauled|squalls|hauling|terrific storm |blowing hard|squalls|perfect gale|squall|high winds|blew very heavy|fearfuly|blowed fearfuly|hauling out|rain squalls|growing rough|very moderate, calm|fresh breeze, rough|heavy blow, rough|sair|mode|wind increasing|wind out|squall, moderate|bills of laden wind|hauling little)\\b"
-# 
-# 
-# five_knots <- "calm|pleasant|fine|clear|light|fresh breeze|scant|fine|clam|clear|light|cleared of wind|smooth|baffling wind|eased|light air|fesh|dead calm|died out|hair|no wind|becalmed|not wind enough|baffling|becalmed|cleared up|very light air of wind|light air|perfectly calm|hazed up|wind out|hauling little"
-# 
-# #ten_knots <- "baffling|calm|" # Idk bc i only made three categories 
-# 
-# fifteen_knots <- "moderate|fresh breeze|strong breeze|smart breeze|fresh blow
-# good breeze|very fresh breeze|moderating|blowy|blowing|variable|breezing|whole sail breeze|changeable|fresh trade winds|high|peak breeze|mederate|fine|perfect|hauled down|steady|fine|wind increasing|breezed up|increasing|wind out|baffling and moderate"
-# 
-# above_twenty_knots <- "blustering|heavy blow|heavy|strong|rough|windstorm|big storm|heavy breeze|gale|stronger|tremendous|squall|hard|blowing a gale|hauled|squalls|hauling|terrific storm|blowing hard|squalls|perfect gale|squall|high winds|blew very heavy|fearfuly|blowed fearfuly|hauling out|rain squalls|growing rough"
-# 
-# undecided <- "very moderate, calm|fresh breeze, rough|heavy blow, rough|sair|mode|wind increasing|wind out|squall, moderate|bills of laden wind|hauling little"
-
-
-
-
-```
 
 
 ## Create a data frame for wind
@@ -750,13 +771,24 @@ wind_hauling <- journal_wind_df %>%
 
 ```
 
-
-
 ```{r}
 hauled_wind_yes_direction$journal_entry[c(1, 2, 3, 4, 5,6,7,8,9,10)]
 
 ```
 
+# Where are we getting beaufort and where are we not?
+```{r}
+beaufort_df <- journal_wind_df %>%
+  filter(!is.na(beaufort))
+
+no_beaufort_df <- journal_wind_df %>%
+  filter(is.na(beaufort))
+
+df_direction_words <- journal_wind_df %>%
+  filter(str_detect(journal_entry, "\\b(north|south|east|west)(?:ward)\\b"))
+
+
+```
 
 
 
