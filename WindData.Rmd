@@ -41,6 +41,12 @@ library(magrittr)
 library(dplyr) 
 library(readxl)
 library(writexl)
+library(circular)
+library(forcats)
+library(openair)
+library(UpSetR)
+library(ComplexUpset)
+
 ```
 
 ## Read in journals data
@@ -392,7 +398,7 @@ journal_data <- journals |>
             str_detect(journal_entry, str_c(wind_patterns$ESE, collapse = "|")) ~ "ESE",
             str_detect(journal_entry, str_c(wind_patterns$WNW, collapse = "|")) ~ "WNW",
             str_detect(journal_entry, str_c(wind_patterns$WSW, collapse = "|")) ~ "WSW",
-            str_detect(journal_entry, direction_word_regex) ~ "WARD",
+            # str_detect(journal_entry, direction_word_regex) ~ "WARD",
 
             TRUE ~ "No wind"
         )
@@ -790,6 +796,194 @@ df_direction_words <- journal_wind_df %>%
 
 ```
 
+
+# Visualizing wind without speed
+
+```{r}
+
+
+missing_speed <- subset(
+  journal_wind_df,
+  is.na(wind_speed_knots) &
+    !(tolower(wind_direction) %in% "no wind")
+)
+
+missing_speed$wind_speed_fake <- 1
+
+
+windRose(
+  missing_speed,
+  wd = "wind_meteor",
+  ws = "wind_speed_fake",
+  paddle = FALSE
+)
+
+
+
+```
+```{r}
+
+ggplot(missing_speed, aes(wind_meteor)) +
+  geom_histogram(binwidth = 30) +
+  coord_polar()
+
+```
+```{r}
+
+missing_speed$count <- 1
+
+ggplot(missing_speed, aes(x = wind_direction, y = count)) +
+  stat_summary(fun = sum, geom = "col") +
+  coord_polar() +
+  labs(x = "", y = "Frequency")
+
+```
+```{r}
+
+freq <- missing_speed %>%
+  count(month, wind_direction)
+
+ggplot(freq, aes(wind_direction, month, fill = n)) +
+  geom_tile() +
+  coord_polar()
+
+```
+```{r}
+
+
+month_levels <- c(
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+)
+
+freq <- missing_speed %>%
+  mutate(month = factor(month, levels = month_levels)) %>%
+  count(month, wind_direction)
+
+ggplot(freq, aes(wind_direction, month, fill = n)) +
+  geom_tile() +
+  coord_polar()
+
+
+
+```
+
+
+
+```{r}
+ggplot(missing_speed, aes(month, wind_direction, color = wind_direction)) +
+  geom_point(size = 1)
+
+```
+
+
+```{r}
+library(dplyr)
+library(ComplexUpset)
+library(ggplot2)
+
+journal_upset_df <- journal_wind_df %>%
+  mutate(
+    # Sets for UpSet intersections
+    WindMentioned = wind_mentioned == "Yes",
+    HasDirection  = !is.na(wind_dir_math_real),
+    StrongWind    = !is.na(beaufort) & beaufort >= 3, # moderate+ winds
+    Winter        = month_numeric %in% c(12, 1, 2),
+    
+    # Ensure numeric columns are numeric
+    wind_dir_math_real = as.numeric(wind_dir_math_real),
+    month_numeric = as.numeric(month_numeric),
+    year = as.numeric(format(date_mdy, "%Y"))
+  )
+
+```
+
+
+
+```{r}
+upset(
+  journal_upset_df,
+  
+  # The sets we want intersections for
+  intersect = c("WindMentioned", "HasDirection", "StrongWind", "Winter"),
+
+  # Base annotation: counts of intersection sizes
+  base_annotations = list(
+  "Intersection size" = intersection_size()
+),
+
+  
+  # Attribute plots
+  annotations = list(
+    
+    # Numeric scatter plots
+    "Direction vs Beaufort" =
+      ggplot(mapping = aes(x = wind_dir_math_real, y = beaufort)) +
+      geom_point(alpha = 0.4, size = 0.8, na.rm = TRUE) +
+      labs(x = "Wind direction (degrees)", y = "Beaufort scale"),
+    
+    "Month vs Direction" =
+      ggplot(mapping = aes(x = month_numeric, y = wind_dir_math_real)) +
+      geom_point(alpha = 0.4, size = 0.8, na.rm = TRUE) +
+      labs(x = "Month", y = "Wind direction (degrees)"),
+    
+    "Year vs Beaufort" =
+      ggplot(mapping = aes(x = year, y = beaufort)) +
+      geom_point(alpha = 0.4, size = 0.8, na.rm = TRUE) +
+      labs(x = "Year", y = "Beaufort scale"),
+    
+    # Categorical plot for compass directions
+    "Direction distribution" =
+      ggplot(mapping = aes(x = factor(wind_direction))) +
+      geom_bar(na.rm = TRUE) +
+      labs(x = "Wind direction (compass)", y = "Count")
+  )
+)
+
+```
+```{r}
+
+upset(
+  journal_upset_df,
+  
+  # The sets we want intersections for
+  intersect = c("WindMentioned", "HasDirection", "StrongWind", "Winter"),
+
+  # Base annotation: counts of intersection sizes
+  base_annotations = list(
+  "Intersection size" = intersection_size()
+),
+
+  annotations = list(
+
+  "Direction vs Beaufort" =
+    ggplot(mapping = aes(x = wind_dir_math_real, y = beaufort)) +
+      geom_point(alpha = 0.5, size = 1.5, na.rm = TRUE) +
+      labs(x = "Wind direction (°)", y = "Beaufort") +
+      theme_minimal(base_size = 14),
+
+  "Month vs Direction" =
+    ggplot(mapping = aes(x = month_numeric, y = wind_dir_math_real)) +
+      geom_point(alpha = 0.5, size = 1.5, na.rm = TRUE) +
+      labs(x = "Month", y = "Wind direction (°)") +
+      theme_minimal(base_size = 14),
+
+  "Year vs Beaufort" =
+    ggplot(mapping = aes(x = year, y = beaufort)) +
+      geom_point(alpha = 0.5, size = 1.5, na.rm = TRUE) +
+      labs(x = "Year", y = "Beaufort") +
+      theme_minimal(base_size = 14),
+
+  "Direction distribution" =
+    ggplot(mapping = aes(x = factor(wind_direction))) +
+      geom_bar(na.rm = TRUE) +
+      labs(x = "Wind direction (compass)", y = "Count") +
+      theme_minimal(base_size = 14) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))  # rotate labels
+
+  )
+)
+```
 
 
 ## Plot with animation by year 
