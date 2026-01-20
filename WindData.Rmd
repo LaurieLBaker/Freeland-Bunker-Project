@@ -883,17 +883,24 @@ ggplot(missing_speed, aes(month, wind_direction, color = wind_direction)) +
 
 upset_df <- journal_wind_df %>%
   mutate(
-    WindMentioned = wind_mentioned == "Yes",
+    WindDescription = wind_mentioned == "Yes"&
+      !is.na(wind_speed_description) &
+      wind_speed_description !="",
     HasDirection  = !is.na(wind_dir_math_real),
-    StrongWind    = !is.na(beaufort) & beaufort >= 3,
     Winter        = month_numeric %in% c(12, 1, 2),
     year_numeric  = as.numeric(format(date_mdy, "%Y"))
   ) %>%
   # keep numeric columns for attribute plots
   select(
-    WindMentioned, HasDirection, StrongWind, Winter,
-    beaufort, wind_dir_math_real, month_numeric, wind_speed_knots, year_numeric
+    WindDescription, HasDirection, Winter,
+    beaufort, wind_meteor, month_numeric, wind_speed_knots, year_numeric, vector_magnitude
   )
+
+# there are some outliers in the year data (translation mistakes) so filter these out or they will skew the axis 
+
+upset_df <- upset_df %>%
+  filter(year_numeric >= 1500, year_numeric <= 1900)
+
 
 ```
 
@@ -901,8 +908,7 @@ upset_df <- journal_wind_df %>%
 
 ```{r}
 
-
-upset_df$wind_dir_math_real <- as.numeric(upset_df$wind_dir_math_real)
+# right now only the month_numeric column does this but if you change the columns to include in the upset_df you may need to write additional lines for those if they populate as integers 
 
 upset_df$month_numeric <- as.numeric(upset_df$month_numeric)
 
@@ -922,9 +928,10 @@ upset_df <- as.data.frame(upset_df)
 ```{r}
 upset_df_clean <- upset_df %>%
   filter(!is.na(beaufort),
-         !is.na(wind_dir_math_real),
+         !is.na(wind_meteor),
          !is.na(month_numeric),
-         !is.na(wind_speed_knots))
+         !is.na(wind_speed_knots),
+         !is.na(vector_magnitude))
 
 ```
 
@@ -940,7 +947,7 @@ upset_df_clean <- as.data.frame(upset_df_clean)
 # Make logical sets numeric (i.e. 1 or 0 in place of TRUE/FALSE)
 
 ```{r}
-sets <- c("WindMentioned", "HasDirection", "StrongWind", "Winter")
+sets <- c("WindDescription", "HasDirection", "Winter")
 
 upset_df_clean2 <- upset_df_clean %>%
   mutate(across(all_of(sets), ~ as.integer(.)))
@@ -970,7 +977,7 @@ upset_df_clean2 <- as.data.frame(upset_df_clean2)
 
 ```{r}
 
-jpeg("upset3.jpg", width = 10, height = 20, units = "in", res = 300)
+jpeg("UpSetWinter.jpg", width = 10, height = 10, units = "in", res = 300)
 
 upset(
   upset_df_clean2,
@@ -979,10 +986,10 @@ upset(
   attribute.plots = list(
     gridrows = 60,
     plots = list(
-      list(plot = scatter_plot, x = "wind_dir_math_real", y = "beaufort"),
+      list(plot = scatter_plot, x = "year_numeric", y = "beaufort", xlim = c(1500,1900)),
       list(plot = scatter_plot, x = "month_numeric", y = "beaufort"),
-      list(plot = scatter_plot, x = "year_numeric", y = "beaufort", xlim = c(1800, 1900)),
-      list(plot = histogram, x = "wind_dir_math_real")
+      list(plot = scatter_plot, x = "beaufort", y = "vector_magnitude"),
+      list(plot = scatter_plot, x = "wind_meteor", y = "vector_magnitude")
     ),
     ncols = 2
   )
