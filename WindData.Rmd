@@ -45,7 +45,6 @@ library(circular)
 library(forcats)
 library(openair)
 library(UpSetR)
-library(ComplexUpset)
 
 ```
 
@@ -875,30 +874,153 @@ ggplot(missing_speed, aes(month, wind_direction, color = wind_direction)) +
   geom_point(size = 1)
 
 ```
+# Working on UpSetR Plots. I was working with ComplexUpSet but really want UpSetR to work. 
 
+# Create set columns - seasonal UpSet for winter 
 
 ```{r}
-library(dplyr)
-library(ComplexUpset)
-library(ggplot2)
 
-journal_upset_df <- journal_wind_df %>%
+
+upset_df <- journal_wind_df %>%
   mutate(
-    # Sets for UpSet intersections
     WindMentioned = wind_mentioned == "Yes",
     HasDirection  = !is.na(wind_dir_math_real),
-    StrongWind    = !is.na(beaufort) & beaufort >= 3, # moderate+ winds
+    StrongWind    = !is.na(beaufort) & beaufort >= 3,
     Winter        = month_numeric %in% c(12, 1, 2),
-    
-    # Ensure numeric columns are numeric
-    wind_dir_math_real = as.numeric(wind_dir_math_real),
-    month_numeric = as.numeric(month_numeric),
-    year = as.numeric(format(date_mdy, "%Y"))
+    year_numeric  = as.numeric(format(date_mdy, "%Y"))
+  ) %>%
+  # keep numeric columns for attribute plots
+  select(
+    WindMentioned, HasDirection, StrongWind, Winter,
+    beaufort, wind_dir_math_real, month_numeric, wind_speed_knots, year_numeric
   )
 
 ```
 
+# Make sure columns that populate as integers are numeric 
 
+```{r}
+
+
+upset_df$wind_dir_math_real <- as.numeric(upset_df$wind_dir_math_real)
+
+upset_df$month_numeric <- as.numeric(upset_df$month_numeric)
+
+
+
+```
+
+# Make sure the dataframe is being recognized as a dataframe and not a tibble
+
+```{r}
+upset_df <- as.data.frame(upset_df)
+
+```
+
+# Remove NAs 
+
+```{r}
+upset_df_clean <- upset_df %>%
+  filter(!is.na(beaufort),
+         !is.na(wind_dir_math_real),
+         !is.na(month_numeric),
+         !is.na(wind_speed_knots))
+
+```
+
+# Recognize as data frame 
+
+```{r}
+
+# might be redundant could remove later 
+
+upset_df_clean <- as.data.frame(upset_df_clean)
+```
+
+# Make logical sets numeric (i.e. 1 or 0 in place of TRUE/FALSE)
+
+```{r}
+sets <- c("WindMentioned", "HasDirection", "StrongWind", "Winter")
+
+upset_df_clean2 <- upset_df_clean %>%
+  mutate(across(all_of(sets), ~ as.integer(.)))
+
+```
+
+# Make sure sets are read first 
+
+```{r}
+upset_df_clean2 <- upset_df_clean2 %>%
+  select(all_of(sets), everything())
+
+```
+
+# Recognize as data frame 
+
+```{r}
+
+# might be redundant could remove later 
+
+upset_df_clean2 <- as.data.frame(upset_df_clean2)
+
+```
+
+
+# Plot 
+
+```{r}
+
+jpeg("upset3.jpg", width = 10, height = 20, units = "in", res = 300)
+
+upset(
+  upset_df_clean2,
+  sets = sets,
+  order.by = "freq",
+  attribute.plots = list(
+    gridrows = 60,
+    plots = list(
+      list(plot = scatter_plot, x = "wind_dir_math_real", y = "beaufort"),
+      list(plot = scatter_plot, x = "month_numeric", y = "beaufort"),
+      list(plot = scatter_plot, x = "year_numeric", y = "beaufort", xlim = c(1800, 1900)),
+      list(plot = histogram, x = "wind_dir_math_real")
+    ),
+    ncols = 2
+  )
+)
+
+
+
+dev.off()
+
+
+
+```
+
+# ComplexUpset code if needed later. Can remove when UpSetR fig is finalized. 
+
+```{r}
+
+journal_upset_df <- journal_wind_df %>%
+  mutate(
+    # ---- Sets (logical only) ----
+    WindMentioned = wind_mentioned == "Yes",
+    HasDirection  = !is.na(wind_dir_math_real),
+    StrongWind    = !is.na(beaufort) & beaufort >= 3,
+    Winter        = month_numeric %in% c(12, 1, 2),
+
+    # ---- Numeric versions (NEW columns) ----
+    wind_dir_deg  = suppressWarnings(as.numeric(as.character(wind_dir_math_real))),
+    month_num     = suppressWarnings(as.numeric(as.character(month_numeric))),
+    year_num      = as.numeric(lubridate::year(date_mdy))
+  )
+
+ggsave(filename = "upset.jpg", width = 30, height = 15)
+
+
+
+```
+
+# ComplexUpset code if needed later. Can remove when UpSetR fig is finalized. 
 
 ```{r}
 upset(
@@ -918,17 +1040,17 @@ upset(
     
     # Numeric scatter plots
     "Direction vs Beaufort" =
-      ggplot(mapping = aes(x = wind_dir_math_real, y = beaufort)) +
+      ggplot(mapping = aes(x = wind_dir_deg, y = beaufort)) +
       geom_point(alpha = 0.4, size = 0.8, na.rm = TRUE) +
       labs(x = "Wind direction (degrees)", y = "Beaufort scale"),
     
     "Month vs Direction" =
-      ggplot(mapping = aes(x = month_numeric, y = wind_dir_math_real)) +
+      ggplot(mapping = aes(x = month_num, y = wind_dir_math_real)) +
       geom_point(alpha = 0.4, size = 0.8, na.rm = TRUE) +
       labs(x = "Month", y = "Wind direction (degrees)"),
     
     "Year vs Beaufort" =
-      ggplot(mapping = aes(x = year, y = beaufort)) +
+      ggplot(mapping = aes(x = year_num, y = beaufort)) +
       geom_point(alpha = 0.4, size = 0.8, na.rm = TRUE) +
       labs(x = "Year", y = "Beaufort scale"),
     
@@ -940,7 +1062,12 @@ upset(
   )
 )
 
+ggsave(filename = "upset.jpg", width = 30, height = 15)
+
 ```
+
+# ComplexUpset code if needed later. Can remove when UpSetR fig is finalized. 
+
 ```{r}
 
 upset(
@@ -984,6 +1111,7 @@ upset(
   )
 )
 ```
+
 
 
 ## Plot with animation by year 
