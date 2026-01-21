@@ -883,17 +883,23 @@ ggplot(missing_speed, aes(month, wind_direction, color = wind_direction)) +
 
 upset_df <- journal_wind_df %>%
   mutate(
-    WindDescription = wind_mentioned == "Yes"&
-      !is.na(wind_speed_description) &
-      wind_speed_description !="",
+    WindMentioned = wind_mentioned == "Yes",
+    HasWindDescription = !is.na(wind_speed_description) &
+                         wind_speed_description !="",
     HasDirection  = !is.na(wind_dir_math_real),
+    StrongWind    = beaufort %in% c(8,9,10),
+    ModerateWind  = beaufort %in% c(5, 6, 7), 
+    CalmWind      = beaufort %in% c(2,3,4),
+    WindOut     = beaufort %in% c(0,1),
     Winter        = month_numeric %in% c(12, 1, 2),
+    Spring        = month_numeric %in% c(3, 4, 5),
+    Summer       = month_numeric %in% c(6, 7, 8),
+    Fall          = month_numeric %in% c(9, 10, 11),
     year_numeric  = as.numeric(format(date_mdy, "%Y"))
   ) %>%
   # keep numeric columns for attribute plots
   select(
-    WindDescription, HasDirection, Winter,
-    beaufort, wind_meteor, month_numeric, wind_speed_knots, year_numeric, vector_magnitude
+    HasWindDescription, HasDirection, WindMentioned, StrongWind, ModerateWind, CalmWind, WindOut, Winter, Spring, Summer, Fall, beaufort, wind_meteor, month_numeric, wind_speed_knots, year_numeric, vector_magnitude
   )
 
 # there are some outliers in the year data (translation mistakes) so filter these out or they will skew the axis 
@@ -901,18 +907,27 @@ upset_df <- journal_wind_df %>%
 upset_df <- upset_df %>%
   filter(year_numeric >= 1500, year_numeric <= 1900)
 
+# make month column a factor so axis ticks are whole numbers 
+
+upset_df <- upset_df %>%
+  mutate(
+    month_numeric = factor(
+      month_numeric,
+      levels = 1:12,
+      labels = 1:12
+    )
+  )
+
 
 ```
 
-# Make sure columns that populate as integers are numeric 
+# Make sure columns that populate as factors are numeric 
 
 ```{r}
 
-# right now only the month_numeric column does this but if you change the columns to include in the upset_df you may need to write additional lines for those if they populate as integers 
+# right now only the month_numeric column does this but if you change the columns to include in the upset_df you may need to write additional lines for those if they populate as integers or if you make them factors like I did above  
 
 upset_df$month_numeric <- as.numeric(upset_df$month_numeric)
-
-
 
 ```
 
@@ -947,7 +962,7 @@ upset_df_clean <- as.data.frame(upset_df_clean)
 # Make logical sets numeric (i.e. 1 or 0 in place of TRUE/FALSE)
 
 ```{r}
-sets <- c("WindDescription", "HasDirection", "Winter")
+sets <- c("HasWindDescription", "HasDirection", "WindMentioned", "StrongWind", "ModerateWind", "CalmWind", "WindOut",  "Winter", "Spring", "Summer", "Fall")
 
 upset_df_clean2 <- upset_df_clean %>%
   mutate(across(all_of(sets), ~ as.integer(.)))
@@ -977,7 +992,7 @@ upset_df_clean2 <- as.data.frame(upset_df_clean2)
 
 ```{r}
 
-jpeg("UpSetWinter.jpg", width = 10, height = 10, units = "in", res = 300)
+jpeg("UpSetWinter.jpg", width = 11, height = 10, units = "in", res = 300)
 
 upset(
   upset_df_clean2,
@@ -986,14 +1001,15 @@ upset(
   attribute.plots = list(
     gridrows = 60,
     plots = list(
-      list(plot = scatter_plot, x = "year_numeric", y = "beaufort", xlim = c(1500,1900)),
-      list(plot = scatter_plot, x = "month_numeric", y = "beaufort"),
-      list(plot = scatter_plot, x = "beaufort", y = "vector_magnitude"),
-      list(plot = scatter_plot, x = "wind_meteor", y = "vector_magnitude")
+      list(plot = scatter_plot, x = "year_numeric", y = "beaufort", col.by = "sets"),
+      list(plot = scatter_plot, x = "month_numeric", y = "beaufort", col.by = "sets"),
+      list(plot = scatter_plot, x = "beaufort", y = "vector_magnitude", col.by = "sets"),
+      list(plot = scatter_plot, x = "wind_meteor", y = "vector_magnitude", col.by = "sets")
     ),
     ncols = 2
+   )
   )
-)
+ 
 
 
 
@@ -1002,6 +1018,10 @@ dev.off()
 
 
 ```
+
+
+
+
 
 # ComplexUpset code if needed later. Can remove when UpSetR fig is finalized. 
 
