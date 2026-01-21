@@ -855,15 +855,143 @@ month_levels <- c(
   "July", "August", "September", "October", "November", "December"
 )
 
+directions <- c(
+  "N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"
+)
+
 freq <- missing_speed %>%
-  mutate(month = factor(month, levels = month_levels)) %>%
-  count(month, wind_direction)
+  mutate(month = factor(month, levels = month_levels),
+         wind_direction = factor(wind_direction, levels = directions)) %>%
+  count(month, wind_direction) %>%
+  complete(month, wind_direction, fill = list(n = 0)) %>%
+  mutate(n_fill = ifelse(n == 0, NA, n))
 
-ggplot(freq, aes(wind_direction, month, fill = n)) +
-  geom_tile() +
-  coord_polar()
+         
+ggplot(freq, aes(wind_direction, month, fill = n_fill)) +
+  geom_tile(color = "grey80") +
+  scale_fill_gradient(
+    low = "lightblue",
+    high = "navy",
+    na.value = "white",
+    name = "Count"
+  ) +
+  scale_y_discrete(limits = rev(month_levels)) +
+  labs(
+    title = "Missing Speed Data Counts by Month",
+    x = "Wind Direction",
+    y = "Month"
+  ) +
+  coord_polar(theta = "x", start = 29*pi/15, direction = -1)
+
+# ,"WNW","ESE","SSW","SSE"
+
+```
 
 
+# Interesting visual I made accidentally 
+
+```{r}
+month_levels <- c(
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+)
+
+directions <- c(
+  "N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"
+)
+
+freq <- missing_speed %>%
+  mutate(month = factor(month, levels = month_levels),
+         wind_direction = factor(wind_direction, levels = directions)) %>%
+  count(month, wind_direction) %>%
+  complete(month, wind_direction, fill = list(n = 0)) %>%
+  mutate(n_fill = ifelse(n == 0, NA, n))
+
+         
+ggplot(freq, aes(wind_direction, month, fill = n_fill)) +
+  geom_tile(color = "grey80") +
+  scale_fill_gradient(
+    low = "lightblue",
+    high = "navy",
+    na.value = "white",
+    name = "Count"
+  ) +
+  scale_y_discrete(limits = rev(month_levels)) +
+  labs(
+    title = "Missing Speed Data Counts by Month",
+    x = "Wind Direction",
+    y = "Month"
+  )
+  coord_polar(theta = "x", start = 29*pi/15, direction = -1)
+```
+
+# Trying that same wind rose for the data we do have...need to make a new dataframe that just contains speed (could use UpSet for this)
+
+```{r}
+month_levels <- c(
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+)
+
+directions <- c(
+  "N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"
+)
+
+freq_wind_present <- journal_wind_df %>%
+  mutate(month = factor(month, levels = month_levels),
+         wind_direction = factor(wind_direction, levels = directions)) %>%
+  count(month, wind_direction) %>%
+  complete(month, wind_direction, fill = list(n = 0)) %>%
+  mutate(n_fill = ifelse(n == 0, NA, n))  %>%
+  filter(!is.na(wind_direction))
+
+         
+ggplot(freq_wind_present, aes(wind_direction, month, fill = n_fill)) +
+  geom_tile(color = "grey80") +
+  scale_fill_gradient(
+    low = "lightblue",
+    high = "navy",
+    na.value = "white",
+    name = "Count"
+  ) +
+  scale_y_discrete(limits = rev(month_levels)) +
+  labs(
+    title = "Missing Speed Data Counts by Month",
+    x = "Wind Direction",
+    y = "Month"
+  ) +
+  coord_polar(theta = "x", start = 29*pi/15, direction = -1)
+
+```
+
+```{r}
+wind_rose <- missing_speed %>%
+  count(wind_direction)
+
+```
+
+```{r}
+directions <- c("N","NE","E","ESE","SSE","S","SSW","SW","W","WNW","NW")
+
+wind_rose$wind_direction <- factor(
+  wind_rose$wind_direction,
+  levels = directions
+)
+
+```
+
+```{r}
+ggplot(wind_rose, aes(wind_direction, n, fill = n)) +
+  geom_col(width = 1) +
+  coord_polar(start = pi/2, direction = -1) +
+  theme_minimal()
+
+```
+```{r}
+ggplot(freq, aes(wind_direction, n, fill = n)) +
+  geom_col(width = 1) +
+  coord_polar(start = pi/2, direction = -1) +
+  facet_wrap(~ month)
 
 ```
 
