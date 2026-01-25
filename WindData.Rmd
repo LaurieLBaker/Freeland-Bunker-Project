@@ -568,11 +568,12 @@ journal_wind_unique %>%
 ## Create a data frame for wind
 
 ```{r}
-journal_wind_df <- journal_wind
+
+journal_wind_df <- journal_wind_unique
 
 ## Frances check: what might we be leaving out?
 
-journal_wind_df <- journal_wind |>
+journal_wind_df <- journal_wind_unique |>
   mutate(
     wind_speed_knots = case_when(
       str_detect(str_to_lower(wind_speed_description),
