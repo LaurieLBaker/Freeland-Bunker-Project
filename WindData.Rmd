@@ -59,8 +59,10 @@ journals <- read_csv("/Users/francesleduke/Downloads/freelandbunker/data/journal
 
 ```{r}
 # Define a function to extract wind direction notation
+
 extract_wind_direction <- function(entry) {
   directions <- c("N", "S", "E", "W", "NE", "NW", "SE", "SW", "NNE", "NNW", "SSE", "SSW", "ENE", "ESE", "WNW", "WSW")
+  
   # Search for any of the directions in the entry
   matched_directions <- grep(paste(directions, collapse="|"), entry, value = FALSE, ignore.case = TRUE)
   if (length(matched_directions) > 0) {
@@ -522,7 +524,45 @@ wind_speed_patterns <- read_excel("/Users/francesleduke/Downloads/freelandbunker
 
 
 ```
+# Create a dataframe that filters out rows with changing metadata causing duplicate rows to exist (i.e. multiple rows for one date causing duplicate datapoints due to location changes)
 
+```{r}
+
+# keep only unique combinations of wind columns 
+
+# if there are multiple rows for the same date_mdy where all wind_related columns are identical, remove them 
+
+journal_wind_unique <- journal_wind %>%
+  distinct(date_mdy, wind_direction, wind_meteor, wind_speed_description, .keep_all = TRUE)
+
+# delete duplicate NAs - keep missing wind/data in order to visualize it, but don't keep duplicate datapoints 
+
+journal_wind_unique <- journal_wind_unique %>%
+  group_by(date_mdy) %>%
+  filter(!(is.na(wind_direction) & is.na(wind_meteor) & is.na(wind_speed_description) & row_number() > 1)) %>%
+  ungroup()
+
+# ensure no more duplicate NAs remain per day 
+# this sound return 0 rows 
+
+journal_wind_unique_duplicates <- journal_wind_unique %>%
+     group_by(date_mdy, wind_direction, wind_meteor, wind_speed_description) %>%
+     filter(n() > 1) %>%
+     arrange(date_mdy)
+
+
+```
+
+# How many days have multiple wind observations? 
+
+```{r}
+# Days with multiple wind observations
+
+journal_wind_unique %>%
+  count(date_mdy) %>%
+  filter(n > 1) %>%
+  arrange(desc(n))
+```
 
 
 ## Create a data frame for wind
@@ -928,6 +968,10 @@ ggplot(freq, aes(wind_direction, month, fill = n_fill)) +
 # Trying that same wind rose for the data we do have...need to make a new dataframe that just contains speed (could use UpSet for this)
 
 ```{r}
+
+present_speed <- subset(journal_wind_df, !is.na(wind_direction) & !is.na(wind_speed_knots))
+
+
 month_levels <- c(
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
@@ -937,7 +981,7 @@ directions <- c(
   "N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"
 )
 
-freq_wind_present <- journal_wind_df %>%
+freq_wind_present <- present_speed %>%
   mutate(month = factor(month, levels = month_levels),
          wind_direction = factor(wind_direction, levels = directions)) %>%
   count(month, wind_direction) %>%
@@ -956,13 +1000,89 @@ ggplot(freq_wind_present, aes(wind_direction, month, fill = n_fill)) +
   ) +
   scale_y_discrete(limits = rev(month_levels)) +
   labs(
-    title = "Missing Speed Data Counts by Month",
+    title = "Present Speed Data Counts by Month",
     x = "Wind Direction",
     y = "Month"
   ) +
   coord_polar(theta = "x", start = 29*pi/15, direction = -1)
 
 ```
+#for later
+```{r}
+unique_df_cols <- df_cols %>%
+  distinct(id,.keep_all = TRUE)
+```
+
+# Investigating duplicate data
+
+# journals
+
+```{r}
+
+journals_duplicates <- journals [
+  duplicated(journals$date_mdy) | duplicated(journals$date_mdy, fromLast = TRUE),
+]
+
+journals_duplicates <- journals_duplicates %>%
+  arrange(date_mdy)
+
+
+
+```
+
+# journals_wind_reference
+
+```{r}
+
+journals_wind_reference_duplicates <- journals_wind_reference [
+  duplicated(journals_wind_reference$date_mdy) | duplicated(journals_wind_reference$date_mdy, fromLast = TRUE),
+]
+
+journals_wind_reference_duplicates <- journals_wind_reference_duplicates %>%
+  arrange(date_mdy)
+```
+
+# journals_combined 
+
+```{r}
+# journals_combined 
+
+journal_data_duplicates <- journal_data [
+  duplicated(journal_data$date_mdy) | duplicated(journal_data$date_mdy, fromLast = TRUE),
+]
+
+journal_data_duplicates <- journal_data_duplicates %>%
+  arrange(date_mdy)
+```
+
+# journals_long_loc
+
+```{r}
+
+journal_long_loc_duplicates <- journal_long_loc [
+  duplicated(journal_long_loc$date_mdy) | duplicated(journal_long_loc, fromLast = TRUE),
+]
+
+journal_long_loc_duplicates <- journal_long_loc_duplicates %>%
+  arrange(date_mdy)
+
+# seems here that duplicates are mostly in location 
+
+```
+
+# journal_wind 
+
+```{r}
+
+journal_wind_duplicates <- journal_wind [
+  duplicated(journal_wind$date_mdy) | duplicated(journal_wind, fromLast = TRUE),
+]
+
+journal_wind_duplicates <- journal_wind_duplicates %>%
+  arrange(date_mdy)
+
+```
+
 
 ```{r}
 wind_rose <- missing_speed %>%
