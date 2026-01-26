@@ -5,7 +5,7 @@ date: '2024-06-25'
 output: html_document
 ---
 
-```{r install-packages}
+```{r install-packages} 
 # install.packages(c("tidyverse", 
 #                   "tidytext",
 #                   "stopwords",
@@ -573,35 +573,37 @@ journal_wind_df <- journal_wind_unique
 
 ## Frances check: what might we be leaving out?
 
+# takes the Beaufort categorizations we have and makes a column for wind speed in knots, according to standard conversion for each beaufort level 
+
 journal_wind_df <- journal_wind_unique |>
   mutate(
     wind_speed_knots = case_when(
       str_detect(str_to_lower(wind_speed_description),
-                 str_c(str_to_lower(na.omit(wind_speed_patterns$twelve_knots)), collapse = "|")) ~ 12,
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$twelve)), collapse = "|")) ~ 64,
       str_detect(str_to_lower(wind_speed_description),
-                 str_c(str_to_lower(na.omit(wind_speed_patterns$eleven_knots)), collapse = "|")) ~ 11,
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$eleven)), collapse = "|")) ~ 60,
       str_detect(str_to_lower(wind_speed_description),
-                 str_c(str_to_lower(na.omit(wind_speed_patterns$ten_knots)), collapse = "|")) ~ 10,
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$ten)), collapse = "|")) ~ 52,
       str_detect(str_to_lower(wind_speed_description),
-                 str_c(str_to_lower(na.omit(wind_speed_patterns$nine_knots)), collapse = "|")) ~ 9,
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$nine)), collapse = "|")) ~ 44,
       str_detect(str_to_lower(wind_speed_description),
-                 str_c(str_to_lower(na.omit(wind_speed_patterns$eight_knots)), collapse = "|")) ~ 8,
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$eight)), collapse = "|")) ~ 37,
       str_detect(str_to_lower(wind_speed_description),
-                 str_c(str_to_lower(na.omit(wind_speed_patterns$seven_knots)), collapse = "|")) ~ 7,
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$seven)), collapse = "|")) ~ 30,
       str_detect(str_to_lower(wind_speed_description),
-                 str_c(str_to_lower(na.omit(wind_speed_patterns$six_knots)), collapse = "|")) ~ 6,
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$six)), collapse = "|")) ~ 24,
       str_detect(str_to_lower(wind_speed_description),
-                 str_c(str_to_lower(na.omit(wind_speed_patterns$five_knots)), collapse = "|")) ~ 5,
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$five)), collapse = "|")) ~ 19,
       str_detect(str_to_lower(wind_speed_description),
-                 str_c(str_to_lower(na.omit(wind_speed_patterns$four_knots)), collapse = "|")) ~ 4,
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$four)), collapse = "|")) ~ 13,
       str_detect(str_to_lower(wind_speed_description),
-                 str_c(str_to_lower(na.omit(wind_speed_patterns$three_knots)), collapse = "|")) ~ 3,
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$three)), collapse = "|")) ~ 9,
       str_detect(str_to_lower(wind_speed_description),
-                 str_c(str_to_lower(na.omit(wind_speed_patterns$two_knots)), collapse = "|")) ~ 2,
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$two)), collapse = "|")) ~ 5,
       str_detect(str_to_lower(wind_speed_description),
-                 str_c(str_to_lower(na.omit(wind_speed_patterns$one_knot)), collapse = "|")) ~ 1,
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$one)), collapse = "|")) ~ 2,
       str_detect(str_to_lower(wind_speed_description),
-                 str_c(str_to_lower(na.omit(wind_speed_patterns$zero_knots)), collapse = "|")) ~ 0,
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$zero)), collapse = "|")) ~ 1,
       TRUE ~ NA_real_
     )
   )
@@ -687,25 +689,40 @@ journal_wind_df <- journal_wind_df |>
 # Creating a beaufort column 
 ```{r}
 
-#make a column using casewhen; casewhen wind speed is between x and y make beaufort be zero 
+# create a beaufort column 
 
 journal_wind_df <- journal_wind_df |>
-  mutate(beaufort = case_when(
-    wind_speed_knots == 0 ~ 0,
-    wind_speed_knots == 1 ~ 1,
-    wind_speed_knots == 2 ~ 2,
-    wind_speed_knots == 3 ~ 3,
-    wind_speed_knots == 4 ~ 4,
-    wind_speed_knots == 5 ~ 5,
-    wind_speed_knots == 6 ~ 6,
-    wind_speed_knots == 7 ~ 7,
-    wind_speed_knots == 8 ~ 8,
-    wind_speed_knots == 9 ~ 9,
-    wind_speed_knots == 10 ~ 10,
-    wind_speed_knots == 11 ~ 11,
-    wind_speed_knots == 12 ~ 12,
-  TRUE ~ NA_real_   
-  ))
+  mutate(
+    beaufort = case_when(
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$twelve)), collapse = "|")) ~ 12,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$eleven)), collapse = "|")) ~ 11,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$ten)), collapse = "|")) ~ 10,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$nine)), collapse = "|")) ~ 9,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$eight)), collapse = "|")) ~ 8,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$seven)), collapse = "|")) ~ 7,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$six)), collapse = "|")) ~ 6,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$five)), collapse = "|")) ~ 5,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$four)), collapse = "|")) ~ 4,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$three)), collapse = "|")) ~ 3,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$two)), collapse = "|")) ~ 2,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$one)), collapse = "|")) ~ 1,
+      str_detect(str_to_lower(wind_speed_description),
+                 str_c(str_to_lower(na.omit(wind_speed_patterns$zero)), collapse = "|")) ~ 0,
+      TRUE ~ NA_real_
+    )
+  )
 
 ```
 
@@ -726,6 +743,7 @@ beaufort_grouped_math <- journal_wind_df |>
 
 ```
 
+
 # Plot a frequency 'heat map'
 
 ```{r}
@@ -734,6 +752,188 @@ ggplot(beaufort_grouped_math, aes(x = wind_dir_math_real, y = beaufort, fill = f
   geom_tile()
 
 ```
+
+```{r}
+ggplot(beaufort_grouped_math,
+       aes(x = wind_dir_math_real, y = factor(beaufort), fill = frequency)) +
+  geom_tile() +
+  scale_fill_viridis_c() +
+  labs(
+    x = "Wind direction (degrees)",
+    y = "Beaufort scale",
+    fill = "Frequency"
+  )
+
+```
+# Beaufort base r plots 
+
+```{r}
+freq_tbl <- with(journal_wind_df, 
+                 table(beaufort, wind_direction))
+
+freq_tbl
+
+```
+```{r}
+heatmap(
+  freq_tbl,
+  Rowv = NA,
+  Colv = NA,
+  scale = "none",
+  col = hcl.colors(50, "YlOrRd"),
+  xlab = "Wind direction",
+  ylab = "Beaufort scale"
+)
+
+```
+```{r}
+
+# jpeg("mosaic.jpg", width = 7, height = 8, units = "in", res = 300)
+
+mosaicplot(
+  freq_tbl,
+  color = TRUE,
+  las = 2,
+  main = "Beaufort vs Wind Direction"
+)
+
+# dev.off()
+
+
+```
+```{r}
+
+journal_wind_df$dir_bin <- cut(
+  journal_wind_df$wind_dir_math_real,
+  breaks = seq(0, 360, by = 45),
+  include.lowest = TRUE
+)
+
+freq_tbl_bin <- with(journal_wind_df,
+                     table(beaufort, dir_bin))
+
+barplot(freq_tbl_bin, las = 2)
+
+
+```
+
+
+```{r}
+
+hist(journal_wind_df$wind_dir_math_real,
+     breaks = seq(0, 360, by = 15),
+     freq = TRUE,
+     main = "Wind Direction Frequency",
+     xlab = "Degrees")
+
+with(subset(journal_wind_df, beaufort >= 4),
+     hist(wind_dir_math_real, breaks = seq(0, 360, by = 15),
+          add = TRUE, col = rgb(1, 0, 0, 0.3)))
+
+
+```
+
+```{r}
+
+
+ggplot(
+  journal_wind_df |> 
+    filter(!is.na(wind_direction), !is.na(beaufort)),
+  aes(x = wind_dir_math_real, color = factor(beaufort))
+) +
+  geom_density() +
+  scale_x_continuous(
+    limits = c(0, 360),
+    breaks = seq(0, 360, 45)
+  ) +
+  labs(
+    x = "Wind direction (degrees)",
+    y = "Density",
+    color = "Beaufort"
+  )
+
+
+```
+
+
+
+
+```{r}
+
+# Count non-NA wind directions per Beaufort
+valid_beaufort <- journal_wind_df |>
+  filter(!is.na(wind_dir_math_real), !is.na(beaufort)) |>
+  group_by(beaufort) |>
+  summarise(n_dir = sum(!is.na(wind_dir_math_real))) |>
+  filter(n_dir >= 2) |>
+  pull(beaufort)
+
+# Keep only those Beaufort levels
+plot_df <- journal_wind_df |>
+  filter(beaufort %in% valid_beaufort, !is.na(wind_dir_math_real))
+
+ggplot(plot_df, aes(x = wind_dir_math_real)) +
+  geom_density(fill = "steelblue", alpha = 0.5) +
+  facet_wrap(~ beaufort, ncol = 2) +
+  scale_x_continuous(
+    limits = c(0, 360),
+    breaks = seq(0, 360, 45)
+  ) +
+  labs(
+    x = "Wind direction (degrees)",
+    y = "Density",
+    title = "Directional density by Beaufort"
+  )
+
+
+```
+
+
+
+
+```{r}
+ggplot(
+  journal_wind_df |> 
+    filter(!is.na(wind_direction), !is.na(beaufort)),
+  aes(x = wind_direction, fill = factor(beaufort))
+) +
+  geom_bar(position = "stack") +
+  labs(
+    x = "Wind direction",
+    y = "Count",
+    fill = "Beaufort"
+  )
+
+
+
+```
+
+
+```{r}
+journal_wind_df |> 
+  filter(!is.na(wind_dir_math_real), !is.na(beaufort)) |>
+  mutate(dir_bin = cut(
+    wind_dir_math_real,
+    breaks = seq(0, 360, 45),
+    labels = c("N","NE","E","SE","S","SW","W","NW"),
+    include.lowest = TRUE
+  )) |>
+  ggplot(aes(x = dir_bin, fill = factor(beaufort))) +
+  geom_bar(position = "fill") +
+  labs(
+    x = "Wind direction",
+    y = "Proportion",
+    fill = "Beaufort"
+  )
+
+```
+```{r}
+journal_wind_df |>
+  filter(wind_direction == "No wind", !is.na(beaufort)) |>
+  print(n = Inf)
+
+```
+
 
 # How many instances of directional data with no speed?
 
