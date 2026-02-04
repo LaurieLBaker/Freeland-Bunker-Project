@@ -89,197 +89,330 @@ journal_84$journal <- 13
 journal_85$journal <- 14
 journal_86$journal <- 15
 journal_87$journal <- 16
+
+
+
+
 ```
 
-```{r adjust-variable-type}
+
+```{r adjust-variable-type-function}
+
+keep_cols <- c(
+  "date_mdy",
+  "month",
+  "journal_entry",
+  "transcription_accuracy",
+  "location",
+  "location_accuracy",
+  "local_place",
+  "local_place_accuracy",
+  "latitude",
+  "latitude_origin",
+  "longitude",
+  "longitude_origin",
+  "quantity",
+  "unit",
+  "item",
+  "letter",
+  "letter_from",
+  "letter_to",
+  "wind_direction_am",
+  "wind_direction_pm",
+  "wind_direction_night",
+  "wind_speed_am",
+  "wind_speed_pm",
+  "wind_speed_night",
+  "weather_condition_am",
+  "weather_condition_pm",
+  "weather_condition_night",
+  "temperature_am",
+  "temperature_pm",
+  "temperature_night",
+  "image_path",
+  "image_description",
+  "recorder",
+  "notes",
+  "noteworthy",
+  "second_check",
+  "journal"
+)
+
+clean_journal <- function(df, year) {
+
+  df |>
+    # keep only desired columns that exist, in your preferred order
+    select(any_of(keep_cols)) |>
+    # set types (only for columns that exist)
+    mutate(
+      across(any_of(c(
+        "image_path", "image_description", "quantity",
+        "noteworthy", "notes", "recorder",
+        "temperature_am", "temperature_pm", "temperature_night",
+        "latitude_origin", "longitude_origin",
+        "letter_from", "letter_to",
+        "weather_condition_night"
+      )), as.character),
+      across(any_of(c("latitude", "longitude")), ~ as.numeric(as.character(.x)))
+    ) |>
+    mutate(journal_year = year, .after = date_mdy)
+}
+
+journal_71_72 <- clean_journal(journal_71_72, year = 1872)
+journal_73 <- clean_journal(journal_73, year = 1873)
+journal_74 <- clean_journal(journal_74, year = 1874)
+journal_75 <- clean_journal(journal_75, year = 1875)
+journal_76 <- clean_journal(journal_76, year = 1876)
+journal_77 <- clean_journal(journal_77, year = 1877)
+journal_78 <- clean_journal(journal_78, year = 1878)
+journal_79 <- clean_journal(journal_79, year = 1879)
+journal_80 <- clean_journal(journal_80, year = 1880)
+journal_81 <- clean_journal(journal_81, year = 1881)
+journal_82 <- clean_journal(journal_82, year = 1882)
+journal_83 <- clean_journal(journal_83, year = 1883)
+journal_84 <- clean_journal(journal_84, year = 1884)
+journal_85 <- clean_journal(journal_85, year = 1885)
+journal_86 <- clean_journal(journal_86, year = 1886)
+journal_87 <- clean_journal(journal_87, year = 1887)
+
+## Other journals to eventually add
+# journal_88 <- clean_journal(journal_88, year = 1888)
+# journal_89 <- clean_journal(journal_89, year = 1889)
+# journal_90 <- clean_journal(journal_90, year = 1890)
+# journal_91 <- clean_journal(journal_91, year = 1891)
+# journal_92 <- clean_journal(journal_92, year = 1892)
+# journal_93 <- clean_journal(journal_93, year = 1893)
+# journal_94 <- clean_journal(journal_94, year = 1894)
+# journal_95 <- clean_journal(journal_95, year = 1895)
+# journal_96 <- clean_journal(journal_96, year = 1896)
+# journal_97 <- clean_journal(journal_97, year = 1897)
+```
+
+
+```{r adjust-variable-type, eval = FALSE}
 #in order to join data sets, all the corresponding variables have to match; we glimpse() each dataset and changed variable that didn't match our first one
-journal_71_72 <- journal_71_72 %>%
-  rename(transcription_accuracy = transcription) %>%
-  mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description)) %>%
-  mutate(latitude = as.numeric(as.character(latitude))) %>%
-  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+journal_71_72 <- journal_71_72 |>
+  rename(transcription_accuracy = transcription) |>
+  mutate(image_path = as.character(image_path)) |>
+  mutate(image_description = as.character(image_description)) |>
+  mutate(latitude = as.numeric(as.character(latitude))) |>
+  mutate(longitude = as.numeric(as.character(longitude)))  |>
   mutate(quantity = as.character(quantity)) 
 
-journal_73 <- journal_73 %>%
-  mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description)) %>%
-  mutate(latitude = as.numeric(as.character(latitude))) %>%
-  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+journal_73 <- journal_73 |>
+  mutate(image_path = as.character(image_path)) |>
+  mutate(image_description = as.character(image_description)) |>
+  mutate(latitude = as.numeric(as.character(latitude))) |>
+  mutate(longitude = as.numeric(as.character(longitude)))  |>
   mutate(quantity = as.character(quantity)) 
 
-journal_74 <- journal_74 %>%
-  mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description)) %>%
-  mutate(latitude = as.numeric(as.character(latitude))) %>%
-  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+journal_74 <- journal_74 |>
+  mutate(image_path = as.character(image_path)) |>
+  mutate(image_description = as.character(image_description)) |>
+  mutate(latitude = as.numeric(as.character(latitude))) |>
+  mutate(longitude = as.numeric(as.character(longitude)))  |>
   mutate(quantity = as.character(quantity)) 
 
 
-journal_75 <- journal_75 %>%
-  mutate(quantity = as.character(quantity)) %>%
-  mutate(latitude_origin = as.character(latitude_origin)) %>%
-  mutate(longitude_origin = as.character(longitude_origin)) %>%
-  mutate(latitude = as.numeric(as.character(latitude))) %>%
-  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+journal_75 <- journal_75 |>
+  mutate(quantity = as.character(quantity)) |>
+  mutate(latitude_origin = as.character(latitude_origin)) |>
+  mutate(longitude_origin = as.character(longitude_origin)) |>
+  mutate(latitude = as.numeric(as.character(latitude))) |>
+  mutate(longitude = as.numeric(as.character(longitude)))  |>
   mutate(quantity = as.character(quantity)) 
 
-journal_76 <- journal_76 %>%
-  mutate(quantity = as.character(quantity)) %>%
-  mutate(latitude_origin = as.character(latitude_origin)) %>%
-  mutate(longitude_origin = as.character(longitude_origin)) %>%
-  mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.character(noteworthy)) %>%
-  mutate(latitude = as.numeric(as.character(latitude))) %>%
-  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+journal_76 <- journal_76 |>
+  mutate(quantity = as.character(quantity)) |>
+  mutate(latitude_origin = as.character(latitude_origin)) |>
+  mutate(longitude_origin = as.character(longitude_origin)) |>
+  mutate(image_path = as.character(image_path)) |>
+  mutate(image_description = as.character(image_description)) |>
+  mutate(noteworthy = as.character(noteworthy)) |>
+  mutate(latitude = as.numeric(as.character(latitude))) |>
+  mutate(longitude = as.numeric(as.character(longitude)))  |>
   mutate(quantity = as.character(quantity)) 
 
-journal_77 <- journal_77 %>%
-  mutate(quantity = as.character(quantity)) %>%
-  mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.character(noteworthy)) %>%
-  mutate(temperature_am = as.character(temperature_am)) %>%
-  mutate(temperature_pm = as.character(temperature_pm)) %>%
-  mutate(temperature_night = as.character(temperature_night)) %>%
-  mutate(latitude = as.numeric(as.character(latitude))) %>%
-  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+journal_77 <- journal_77 |>
+  mutate(quantity = as.character(quantity)) |>
+  mutate(image_path = as.character(image_path)) |>
+  mutate(image_description = as.character(image_description)) |>
+  mutate(noteworthy = as.character(noteworthy)) |>
+  mutate(temperature_am = as.character(temperature_am)) |>
+  mutate(temperature_pm = as.character(temperature_pm)) |>
+  mutate(temperature_night = as.character(temperature_night)) |>
+  mutate(latitude = as.numeric(as.character(latitude))) |>
+  mutate(longitude = as.numeric(as.character(longitude)))  |>
   mutate(quantity = as.character(quantity)) 
 
-journal_78 <- journal_78 %>%
-  mutate(quantity = as.character(quantity)) %>%
-  mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.character(noteworthy)) %>%
-  mutate(temperature_am = as.character(temperature_am)) %>%
-  mutate(temperature_pm = as.character(temperature_pm)) %>%
-  mutate(temperature_night = as.character(temperature_night)) %>%
-  mutate(latitude = as.numeric(as.character(latitude))) %>%
-  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+journal_78 <- journal_78 |>
+  mutate(quantity = as.character(quantity)) |>
+  mutate(image_path = as.character(image_path)) |>
+  mutate(image_description = as.character(image_description)) |>
+  mutate(noteworthy = as.character(noteworthy)) |>
+  mutate(temperature_am = as.character(temperature_am)) |>
+  mutate(temperature_pm = as.character(temperature_pm)) |>
+  mutate(temperature_night = as.character(temperature_night)) |>
+  mutate(latitude = as.numeric(as.character(latitude))) |>
+  mutate(longitude = as.numeric(as.character(longitude)))  |>
   mutate(quantity = as.character(quantity)) 
 
-journal_79 <- journal_79 %>%
-  mutate(quantity = as.character(quantity)) %>%
-  mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.character(noteworthy)) %>%
-  mutate(temperature_am = as.character(temperature_am)) %>%
-  mutate(temperature_pm = as.character(temperature_pm)) %>%
-  mutate(temperature_night = as.character(temperature_night)) %>%
-  mutate(latitude = as.numeric(as.character(latitude))) %>%
-  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+journal_79 <- journal_79 |>
+  mutate(quantity = as.character(quantity)) |>
+  mutate(image_path = as.character(image_path)) |>
+  mutate(image_description = as.character(image_description)) |>
+  mutate(noteworthy = as.character(noteworthy)) |>
+  mutate(temperature_am = as.character(temperature_am)) |>
+  mutate(temperature_pm = as.character(temperature_pm)) |>
+  mutate(temperature_night = as.character(temperature_night)) |>
+  mutate(latitude = as.numeric(as.character(latitude))) |>
+  mutate(longitude = as.numeric(as.character(longitude)))  |>
   mutate(quantity = as.character(quantity)) 
 
-journal_80 <- journal_80 %>%
-  mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.character(noteworthy)) %>%
-  mutate(temperature_am = as.character(temperature_am)) %>%
-  mutate(temperature_pm = as.character(temperature_pm)) %>%
-  mutate(temperature_night = as.character(temperature_night)) %>%
-  mutate(latitude = as.numeric(as.character(latitude))) %>%
-  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+journal_80 <- journal_80 |>
+  mutate(image_path = as.character(image_path)) |>
+  mutate(image_description = as.character(image_description)) |>
+  mutate(noteworthy = as.character(noteworthy)) |>
+  mutate(temperature_am = as.character(temperature_am)) |>
+  mutate(temperature_pm = as.character(temperature_pm)) |>
+  mutate(temperature_night = as.character(temperature_night)) |>
+  mutate(latitude = as.numeric(as.character(latitude))) |>
+  mutate(longitude = as.numeric(as.character(longitude)))  |>
   mutate(quantity = as.character(quantity)) 
 
-journal_81 <- journal_81 %>%
-  mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.character(noteworthy)) %>%
-  mutate(temperature_am = as.character(temperature_am)) %>%
-  mutate(temperature_pm = as.character(temperature_pm)) %>%
-  mutate(temperature_night = as.character(temperature_night)) %>%
-  mutate(latitude_origin = as.character(latitude_origin)) %>%
-  mutate(letter_to = as.character(letter_to)) %>%
-  mutate(notes = as.character(notes)) %>%
-  mutate(latitude = as.numeric(as.character(latitude))) %>%
-  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+journal_81 <- journal_81 |>
+  mutate(image_path = as.character(image_path)) |>
+  mutate(image_description = as.character(image_description)) |>
+  mutate(noteworthy = as.character(noteworthy)) |>
+  mutate(temperature_am = as.character(temperature_am)) |>
+  mutate(temperature_pm = as.character(temperature_pm)) |>
+  mutate(temperature_night = as.character(temperature_night)) |>
+  mutate(latitude_origin = as.character(latitude_origin)) |>
+  mutate(letter_to = as.character(letter_to)) |>
+  mutate(notes = as.character(notes)) |>
+  mutate(latitude = as.numeric(as.character(latitude))) |>
+  mutate(longitude = as.numeric(as.character(longitude)))  |>
   mutate(quantity = as.character(quantity)) 
 
-journal_82 <- journal_82 %>%
-  mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.character(noteworthy)) %>%
-  mutate(temperature_am = as.character(temperature_am)) %>%
-  mutate(temperature_pm = as.character(temperature_pm)) %>%
-  mutate(temperature_night = as.character(temperature_night)) %>%
-  mutate(latitude_origin = as.character(latitude_origin)) %>%
-  mutate(letter_to = as.character(letter_to))%>%
-  mutate(notes = as.character(notes)) %>%
-  mutate(latitude = as.numeric(as.character(latitude))) %>%
-  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+journal_82 <- journal_82 |>
+  mutate(image_path = as.character(image_path)) |>
+  mutate(image_description = as.character(image_description)) |>
+  mutate(noteworthy = as.character(noteworthy)) |>
+  mutate(temperature_am = as.character(temperature_am)) |>
+  mutate(temperature_pm = as.character(temperature_pm)) |>
+  mutate(temperature_night = as.character(temperature_night)) |>
+  mutate(latitude_origin = as.character(latitude_origin)) |>
+  mutate(letter_to = as.character(letter_to))|>
+  mutate(notes = as.character(notes)) |>
+  mutate(latitude = as.numeric(as.character(latitude))) |>
+  mutate(longitude = as.numeric(as.character(longitude)))  |>
   mutate(quantity = as.character(quantity)) 
 
-journal_83 <- journal_83 %>%
-  mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.character(noteworthy)) %>%
-  mutate(temperature_am = as.character(temperature_am)) %>%
-  mutate(temperature_pm = as.character(temperature_pm)) %>%
-  mutate(temperature_night = as.character(temperature_night)) %>%
-  mutate(latitude_origin = as.character(latitude_origin)) %>%
-  mutate(longitude_origin = as.character(longitude_origin)) %>%
-  mutate(letter_from = as.character(letter_from)) %>%
-  mutate(latitude = as.numeric(as.character(latitude))) %>%
-  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+journal_83 <- journal_83 |>
+  mutate(image_path = as.character(image_path)) |>
+  mutate(image_description = as.character(image_description)) |>
+  mutate(noteworthy = as.character(noteworthy)) |>
+  mutate(temperature_am = as.character(temperature_am)) |>
+  mutate(temperature_pm = as.character(temperature_pm)) |>
+  mutate(temperature_night = as.character(temperature_night)) |>
+  mutate(latitude_origin = as.character(latitude_origin)) |>
+  mutate(longitude_origin = as.character(longitude_origin)) |>
+  mutate(letter_from = as.character(letter_from)) |>
+  mutate(latitude = as.numeric(as.character(latitude))) |>
+  mutate(longitude = as.numeric(as.character(longitude)))  |>
   mutate(quantity = as.character(quantity)) 
   
-journal_84 <- journal_84 %>%
-  mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.character(noteworthy)) %>%
-  mutate(temperature_am = as.character(temperature_am)) %>%
-  mutate(temperature_pm = as.character(temperature_pm)) %>%
-  mutate(temperature_night = as.character(temperature_night)) %>%
-  mutate(latitude_origin = as.character(latitude_origin)) %>%
-  mutate(letter_to = as.character(letter_to)) %>%
-  mutate(notes = as.character(notes)) %>%
-  mutate(latitude = as.numeric(as.character(latitude))) %>%
-  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+journal_84 <- journal_84 |>
+  mutate(image_path = as.character(image_path)) |>
+  mutate(image_description = as.character(image_description)) |>
+  mutate(noteworthy = as.character(noteworthy)) |>
+  mutate(temperature_am = as.character(temperature_am)) |>
+  mutate(temperature_pm = as.character(temperature_pm)) |>
+  mutate(temperature_night = as.character(temperature_night)) |>
+  mutate(latitude_origin = as.character(latitude_origin)) |>
+  mutate(letter_to = as.character(letter_to)) |>
+  mutate(notes = as.character(notes)) |>
+  mutate(latitude = as.numeric(as.character(latitude))) |>
+  mutate(longitude = as.numeric(as.character(longitude)))  |>
   mutate(quantity = as.character(quantity)) 
 
-journal_85 <- journal_85 %>%
-  mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.character(noteworthy)) %>%
-  mutate(temperature_am = as.character(temperature_am)) %>%
-  mutate(temperature_pm = as.character(temperature_pm)) %>%
-  mutate(temperature_night = as.character(temperature_night)) %>%
-  mutate(weather_condition_night = as.character(weather_condition_night)) %>%
-  mutate(latitude_origin = as.character(latitude_origin)) %>%
-  mutate(letter_to = as.character(letter_to)) %>%
-  mutate(notes = as.character(notes)) %>%
-  mutate(latitude = as.numeric(as.character(latitude))) %>%
-  mutate(longitude = as.numeric(as.character(longitude))) %>%
+journal_85 <- journal_85 |>
+  mutate(image_path = as.character(image_path)) |>
+  mutate(image_description = as.character(image_description)) |>
+  mutate(noteworthy = as.character(noteworthy)) |>
+  mutate(temperature_am = as.character(temperature_am)) |>
+  mutate(temperature_pm = as.character(temperature_pm)) |>
+  mutate(temperature_night = as.character(temperature_night)) |>
+  mutate(weather_condition_night = as.character(weather_condition_night)) |>
+  mutate(latitude_origin = as.character(latitude_origin)) |>
+  mutate(letter_to = as.character(letter_to)) |>
+  mutate(notes = as.character(notes)) |>
+  mutate(latitude = as.numeric(as.character(latitude))) |>
+  mutate(longitude = as.numeric(as.character(longitude))) |>
   mutate(quantity = as.character(quantity)) 
 
-journal_86 <- journal_86 %>%
-  mutate(image_path = as.character(image_path)) %>%
-  mutate(image_description = as.character(image_description)) %>%
-  mutate(noteworthy = as.character(noteworthy)) %>%
-  mutate(temperature_am = as.character(temperature_am)) %>%
-  mutate(temperature_pm = as.character(temperature_pm)) %>%
-  mutate(temperature_night = as.character(temperature_night)) %>%
-  mutate(recorder = as.character(recorder)) %>%
-  mutate(notes = as.character(notes)) %>%
-  select(- ...37) %>%
-  mutate(latitude = as.numeric(as.character(latitude))) %>%
-  mutate(longitude = as.numeric(as.character(longitude)))  %>%
+journal_86 <- journal_86 |>
+  mutate(image_path = as.character(image_path)) |>
+  mutate(image_description = as.character(image_description)) |>
+  mutate(noteworthy = as.character(noteworthy)) |>
+  mutate(temperature_am = as.character(temperature_am)) |>
+  mutate(temperature_pm = as.character(temperature_pm)) |>
+  mutate(temperature_night = as.character(temperature_night)) |>
+  mutate(recorder = as.character(recorder)) |>
+  mutate(notes = as.character(notes)) |>
+  select(- ...37) |>
+  mutate(latitude = as.numeric(as.character(latitude))) |>
+  mutate(longitude = as.numeric(as.character(longitude)))  |>
+  mutate(quantity = as.character(quantity)) 
+
+journal_87 <- journal_87 |>
+  mutate(image_path = as.character(image_path)) |>
+  mutate(image_description = as.character(image_description)) |>
+  mutate(noteworthy = as.character(noteworthy)) |>
+  mutate(temperature_am = as.character(temperature_am)) |>
+  mutate(temperature_pm = as.character(temperature_pm)) |>
+  mutate(temperature_night = as.character(temperature_night)) |>
+  mutate(recorder = as.character(recorder)) |>
+  mutate(notes = as.character(notes)) |>
+  select(- ...37) |>
+  mutate(latitude = as.numeric(as.character(latitude))) |>
+  mutate(longitude = as.numeric(as.character(longitude)))  |>
   mutate(quantity = as.character(quantity)) 
 
 
 ```
 
 ```{r join-datasets}
-journals <- dplyr::bind_rows(journal_71_72, journal_73, journal_74, journal_75, journal_76, journal_77, journal_78, journal_79, journal_80, journal_81, journal_82, journal_83, journal_84, journal_85, journal_86)
+journals <- dplyr::bind_rows(journal_71_72, journal_73, journal_74, journal_75, journal_76, journal_77, journal_78, journal_79, journal_80, journal_81, journal_82, journal_83, journal_84, journal_85, journal_86, .id = "journal")
+
 ```
 
 ```{r}
 naniar::vis_miss(journals)
 ```
 
+```{r check dates}
+
+journals |>
+  mutate(month_check = lubridate::month(date_mdy, label = TRUE, abbr = FALSE)) |>
+  filter(month != month_check) |>
+  select(journal, date_mdy, month, month_check)
+
+years_to_check <- journals |>
+  mutate(year_check = lubridate::year(date_mdy)) |>
+  filter(year_check < 1870 | year_check > 1886 | year_check != journal_year) |>
+  distinct(year_check, journal_year)
+
+journals |>
+  mutate(year = lubridate::year(date_mdy)) |>
+  filter(year %in% year_check) |>
+  select(journal, date_mdy, month)
+
+```
+
+
 
 ```{r write file}
-write_csv(journals, file = "../data/journals.csv")
+write_csv(journals, file = "data/journals.csv")
 ```
 
