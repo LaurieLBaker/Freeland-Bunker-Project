@@ -52,7 +52,7 @@ library(UpSetR)
 
 ```{r read-in-data}
 library(readr)
-journals <- read_csv("/Users/francesleduke/Downloads/freelandbunker/data/journals.csv") 
+journals <- read_csv("data/journals.csv") 
 ```
 
 # Filter for most mentioned items

@@ -32,6 +32,7 @@ library(googlesheets4)
 library(gargle)
 library(googledrive)
 library(readxl)
+library(naniar)
 ```
 
 
@@ -40,6 +41,16 @@ library(readxl)
 # # Either specify the user:
 # drive_auth(email = "fleduke27@coa.edu",
 #            scopes = "drive.readonly")
+
+gs4_deauth()
+gs4_auth(
+  scopes = c(
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+  )
+)
+
+
 
 journal_71_72 <- read_sheet('https://docs.google.com/spreadsheets/d/1f3buvhuRprNvo_2a4TwjgN-Qez0NkLk6d2VBjhsVt5Y/edit?gid=0#gid=0')
 journal_73 <- read_sheet('https://docs.google.com/spreadsheets/d/1GwncgtXAYXHKhhLlVi5hquwziiKPLk5DrKGlVX0KVA4/edit?gid=0#gid=0')
@@ -57,7 +68,7 @@ journal_84 <- read_sheet('https://docs.google.com/spreadsheets/d/1EDmiVyAiORba3r
 journal_85 <- read_sheet('https://docs.google.com/spreadsheets/d/1JBFWlfNKH8T1b6BgstqWtIzQJtIv8WX-RL2rVSdrrPQ/edit?gid=0#gid=0')
 journal_86 <- read_sheet('https://docs.google.com/spreadsheets/d/1FGM7h5C-JEg4QdxWTLT-qQMk_F9ssqMHM7NACaEd6D0/edit?gid=0#gid=0')
 journal_87 <- read_sheet('https://docs.google.com/spreadsheets/d/1L1wsbbxKNIUEXlqUZVBIHzbgGH9wWbyp0RvFrgODG68/edit?gid=0#gid=0')
-#journal_88 <- read_sheet('https://docs.google.com/spreadsheets/d/1LS9045UxtPU-wtjX0kqZTG0Cwd0MlWKXm5Je-QbZR-A/edit?gid=0#gid=0')
+journal_88 <- read_sheet('https://docs.google.com/spreadsheets/d/1lRYPXqJN_QTghasyfelmWrECUzqH6WqWje5czYWOCx8/edit?gid=0#gid=0')
 
 ```
 
@@ -262,6 +273,11 @@ journal_86 <- journal_86 %>%
 ```{r join-datasets}
 journals <- dplyr::bind_rows(journal_71_72, journal_73, journal_74, journal_75, journal_76, journal_77, journal_78, journal_79, journal_80, journal_81, journal_82, journal_83, journal_84, journal_85, journal_86)
 ```
+
+```{r}
+naniar::vis_miss(journals)
+```
+
 
 ```{r write file}
 write_csv(journals, file = "../data/journals.csv")
