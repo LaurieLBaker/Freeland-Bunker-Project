@@ -45,15 +45,18 @@ library(circular)
 library(forcats)
 library(openair)
 library(UpSetR)
+library(readr)
 
 ```
 
 ## Read in journals data
 
 ```{r read-in-data}
-library(readr)
+
 journals <- read_csv("/Users/francesleduke/Downloads/freelandbunker/data/journals.csv") 
+
 ```
+
 
 # Filter for most mentioned items
 
@@ -382,7 +385,7 @@ wind_speed_patterns <- "(?i)\\b(strong|powerful|heavy|intense|light|gentle|soft|
 
 journal_data <- journals |>
     mutate(
-        wind_direction = case_when(
+        wind_direction = case_when( 
             str_detect(journal_entry, str_c(wind_patterns$N, collapse = "|")) ~ "N",
             str_detect(journal_entry, str_c(wind_patterns$S, collapse = "|")) ~ "S",
             str_detect(journal_entry, str_c(wind_patterns$E, collapse = "|")) ~ "E",
@@ -551,6 +554,72 @@ journal_wind_unique_duplicates <- journal_wind_unique %>%
      arrange(date_mdy)
 
 
+
+```
+
+
+```{r}
+# fix dates 
+
+journal_wind_unique <- journal_wind_unique %>%
+  mutate(date = as.Date(date_mdy))
+
+journal_wind_unique <- journal_wind_unique %>%
+  filter(
+    date >= as.Date("1870-01-01") &
+    date <= as.Date("1887-12-31")
+  )
+
+  
+```
+
+```{r}
+
+journal_wind_unique <- journal_wind_unique %>%
+  mutate(
+    word_count = str_count(journal_entry, "\\S+")
+  )
+
+
+journal_wind_unique <- journal_wind_unique %>%
+  mutate(
+    year  = year(date),
+    word_count = str_count(journal_entry, "\\S+")
+  )
+
+journal_wind_unique <- journal_wind_unique %>%
+  mutate(
+    month = factor(month, levels = month.name)
+  )
+
+
+```
+
+```{r}
+
+monthly_words <- journal_wind_unique %>%
+  group_by(year, month) %>%
+  summarise(
+    total_words = sum(word_count, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+
+```
+
+
+```{r}
+ggplot(monthly_words, aes(x = month, y = total_words)) +
+  geom_point() +
+  facet_wrap(~ year, ncol = 3) +
+  labs(
+    title = "Monthly Writing Activity",
+    subtitle = "Total number of words written per month, faceted by year",
+    x = "Month",
+    y = "Total words written"
+  ) 
+
+ggsave(filename = "howoften.jpg", width = 10, height = 5)
 ```
 
 # How many days have multiple wind observations? 
@@ -753,18 +822,6 @@ ggplot(beaufort_grouped_math, aes(x = wind_dir_math_real, y = beaufort, fill = f
 
 ```
 
-```{r}
-ggplot(beaufort_grouped_math,
-       aes(x = wind_dir_math_real, y = factor(beaufort), fill = frequency)) +
-  geom_tile() +
-  scale_fill_viridis_c() +
-  labs(
-    x = "Wind direction (degrees)",
-    y = "Beaufort scale",
-    fill = "Frequency"
-  )
-
-```
 # Beaufort base r plots 
 
 ```{r}
@@ -774,64 +831,1023 @@ freq_tbl <- with(journal_wind_df,
 freq_tbl
 
 ```
+
 ```{r}
-heatmap(
-  freq_tbl,
-  Rowv = NA,
-  Colv = NA,
-  scale = "none",
-  col = hcl.colors(50, "YlOrRd"),
-  xlab = "Wind direction",
-  ylab = "Beaufort scale"
+
+freq_df <- as.data.frame(freq_tbl)  # columns: beaufort, wind_direction, Freq
+
+ggplot(freq_df, aes(x = wind_direction, y = beaufort, fill = Freq)) +
+  geom_tile(color = "white") +  # creates a grid / heatmap
+  scale_fill_gradient(low = "white", high = "steelblue") +
+  labs(
+    title = "Beaufort Frequency by Wind Direction",
+    x = "Wind Direction",
+    y = "Beaufort",
+    fill = "Count"
+  ) +
+  theme_minimal() +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5, face = "bold")
+  )
+
+```
+
+
+
+
+
+# Questions about beaufort data: 
+
+```{r}
+
+journal_wind_df <- journal_wind_df %>%
+  mutate(
+    season = case_when(
+      month_numeric %in% c(12, 1, 2) ~ "Winter",
+      month_numeric %in% c(3, 4, 5)  ~ "Spring",
+      month_numeric %in% c(6, 7, 8)  ~ "Summer",
+      month_numeric %in% c(9,10,11)  ~ "Fall",
+    ),
+    season = factor(season, levels = c("Winter", "Spring", "Summer", "Fall"))
+  )
+
+```
+
+
+# How often does wind come from each direction? 
+```{r}
+
+journal_wind_df %>%
+  filter(!is.na(wind_direction)) %>%   # drop NA rows
+  count(wind_direction) %>%
+  mutate(prop = n / sum(n)) %>%
+  ggplot(aes(x = wind_direction, y = prop)) +
+  geom_col(width = 0.75) +
+  geom_text(aes(label = n), vjust = -0.3, size = 3) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(
+    title = "Relative Frequency of Wind by Direction",
+    subtitle = "Proportion of total observations",
+    x = "Wind direction",
+    y = "Proportion of observations"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
+
+
+```
+
+```{r}
+journal_wind_df %>%
+  filter(!is.na(wind_direction)) %>%   # drop NA rows
+  count(wind_direction) %>%
+  mutate(prop = n / sum(n)) %>%
+  ggplot(aes(x = reorder(wind_direction, n), y = prop)) +
+  geom_col(width = 0.75) +
+  geom_text(aes(label = scales::percent(prop, accuracy = 0.01)), vjust = -0.1, hjust = -0.2,  size = 3) +
+  scale_y_continuous(labels = scales::percent_format(), expand = expansion(mult = c(0, 0.20))) +
+  coord_flip() +
+  labs(
+    title = "Relative Frequency of Wind by Direction",
+    subtitle = "Proportion of total observations",
+    x = "Wind direction",
+    y = "Proportion of observations"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
+```
+
+```{r}
+
+journal_wind_df %>%
+  filter(!is.na(wind_direction)) %>%   # drop NA rows
+  count(wind_direction) %>%
+  ggplot(aes(x = wind_direction, y = n)) +
+  geom_col(width = 0.75) +
+  geom_text(aes(label = n), vjust = -0.3, size = 3) +
+   scale_x_discrete(
+    limits = c( "N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW", "No wind")
+  ) +
+  labs(
+    title = "Frequency of Wind by Direction",
+    subtitle = "All observations",
+    x = "Wind direction",
+    y = "Number of observations"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
+
+```
+
+
+```{r}
+journal_wind_df %>%
+  filter(!is.na(wind_direction)) %>%
+  count(wind_direction) %>%
+  ggplot(aes(x = wind_direction, y = n)) +
+  geom_col(width = 0.75) +
+  geom_text(aes(label = n), vjust = -0.3, size = 3) +
+  scale_x_discrete(
+    limits = c( "N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW", "No wind")
+  ) +
+  labs(
+    title = "Frequency of Wind by Direction",
+    subtitle = "All observations",
+    x = "Wind direction",
+    y = "Number of observations"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
+
+```
+
+```{r}
+journal_wind_df %>%
+  filter(!is.na(wind_direction)) %>%
+  count(wind_direction) %>%
+  ggplot(aes(x = reorder(wind_direction, n), y = n)) +
+  geom_col(width = 0.75) +
+  geom_text(aes(label = n), hjust = -0.1, size = 3) +
+  coord_flip() +
+  labs(
+    title = "Frequency of Wind by Direction",
+    subtitle = "Ordered by most frequent",
+    x = "Wind direction",
+    y = "Number of observations"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
+
+```
+```{r}
+journal_wind_df %>%
+  filter(!is.na(wind_direction)) %>%
+  count(wind_direction) %>%
+  ggplot(aes(x = reorder(wind_direction, -n), y = n)) +
+  geom_col(width = 0.75) +
+  geom_text(aes(label = n), vjust = -0.3, size = 3) +
+  labs(
+    title = "Frequency of Wind by Direction",
+    subtitle = "Ordered by most frequent",
+    x = "Wind direction",
+    y = "Number of observations"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
+
+```
+
+```{r}
+journal_wind_df %>%
+  filter(!is.na(wind_direction)) %>%
+  count(wind_direction) %>%
+  mutate(prop = n / sum(n)) %>%
+  ggplot(aes(x = wind_direction, y = prop)) +
+  geom_col(width = 0.75) +
+  geom_text(aes(label = scales::percent(prop, accuracy = 0.1)),
+            vjust = -0.3, size = 3) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  scale_x_discrete(limits = c("N","NE","E","SE","S","SW","W","NW")) +
+  labs(
+    title = "Relative Frequency of Wind by Direction",
+    subtitle = "Proportion of total observations",
+    x = "Wind direction",
+    y = "Proportion of observations"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
+
+
+
+```
+
+```{r}
+beaufort_palette <- c(
+  "#f7fbff", "#deebf7", "#c6dbef", "#9ecae1",
+  "#6baed6", "#4292c6", "#2171b5", "#08519c",
+  "#08306b", "#4d004b", "#810f7c"
 )
 
+library(scico)
+
+scale_fill_scico(palette = "lajolla", direction = 1)
+```
+
+```{r}
+journal_wind_df %>%
+  filter(!is.na(wind_direction), !is.na(beaufort)) %>%
+  mutate(beaufort = factor(beaufort, ordered = TRUE)) %>%
+  count(wind_direction, beaufort) %>%
+  ggplot(aes(x = wind_direction, y = n, fill = beaufort)) +
+  geom_col(width = 0.75, color = "grey30") +
+  scale_x_discrete(limits = c("N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW", "No wind")) +
+  scale_fill_manual(values = beaufort_palette, drop = FALSE) +
+  labs(
+    title = "Wind Direction and Strength",
+    subtitle = "Stacked frequency by Beaufort category",
+    x = "Wind direction",
+    y = "Number of observations",
+    fill = "Beaufort scale"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
+
+# ggsave(filename = "test_histo.jpg", width = 30, height = 15)
+```
+
+
+
+```{r}
+journal_wind_df %>%
+  filter(!is.na(wind_direction), !is.na(beaufort)) %>%
+  mutate(beaufort = factor(beaufort, ordered = TRUE)) %>%
+  count(wind_direction, beaufort) %>%
+  group_by(wind_direction) %>%
+  mutate(prop = n / sum(n)) %>%
+  ggplot(aes(x = wind_direction, y = prop, fill = beaufort)) +
+  geom_col(width = 0.75, color = "grey30") +
+  scale_x_discrete(limits = c("N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW", "No wind")) +
+  scale_fill_manual(values = beaufort_palette, drop = FALSE) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(
+    title = "Wind Direction and Strength (Proportional)",
+    subtitle = "100% stacked bar — shows composition regardless of sample size",
+    x = "Wind direction",
+    y = "Proportion of observations",
+    fill = "Beaufort scale"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
+
+```
+```{r}
+journal_wind_df %>%
+  filter(!is.na(wind_direction), !is.na(beaufort)) %>%
+  mutate(beaufort = factor(beaufort, ordered = TRUE)) %>%
+  count(wind_direction, beaufort) %>%
+  ggplot(aes(x = wind_direction, y = n, fill = beaufort)) +
+  geom_col(width = 0.75, color = "grey30") +
+  facet_wrap(~ wind_direction, scales = "free_y", ncol = 4) +
+  scale_fill_manual(values = beaufort_palette, drop = FALSE) +
+  labs(
+    title = "Wind Direction and Strength (Faceted)",
+    subtitle = "Each direction has its own y-scale for better visibility",
+    x = "Wind direction",
+    y = "Number of observations",
+    fill = "Beaufort scale"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    strip.text = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
+
 ```
 ```{r}
 
-# jpeg("mosaic.jpg", width = 7, height = 8, units = "in", res = 300)
+journal_wind_df %>%
+  filter(!is.na(wind_direction), !is.na(beaufort)) %>%
+  mutate(beaufort = factor(beaufort, ordered = TRUE)) %>%
+  count(wind_direction, beaufort) %>%
+  group_by(wind_direction) %>%
+  mutate(
+    prop = n / sum(n),
+    total = sum(n)
+  ) %>%
+  ungroup() %>%
+  ggplot(aes(x = wind_direction, y = prop, fill = beaufort)) +
+  geom_col(width = 0.75, color = "grey30") +
+  geom_text(
+    data = . %>% distinct(wind_direction, total),
+    aes(x = wind_direction, y = 1.02, label = total),
+    inherit.aes = FALSE,   # IMPORTANT
+    size = 3,
+    fontface = "bold"
+  ) +
+  scale_x_discrete(
+    limits = c("N","NNE","NE","E","ESE","SE","S","SSW","SW","W","WNW","NW","No wind")
+  ) +
+  scale_fill_manual(values = beaufort_palette, drop = FALSE) +
+  scale_y_continuous(
+    labels = scales::percent_format(),
+    expand = expansion(mult = c(0, 0.12))
+  ) +
+  labs(
+    title = "Wind Direction and Strength (Proportional)",
+    subtitle = "100% stacked bar — shows composition regardless of sample size\nNumbers above bars = sample size",
+    x = "Wind direction",
+    y = "Proportion of observations",
+    fill = "Beaufort scale"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
 
-mosaicplot(
-  freq_tbl,
-  color = TRUE,
-  las = 2,
-  main = "Beaufort vs Wind Direction"
+
+
+```
+```{r}
+directions <- c(
+  "N","W","S","E"
 )
 
-# dev.off()
+journal_wind_df %>%
+  filter(
+    wind_direction %in% directions,
+    !is.na(beaufort),
+    !is.na(season)
+  ) %>%
+  mutate(beaufort = factor(beaufort, ordered = TRUE)) %>%
+  count(season, wind_direction, beaufort) %>%
+  group_by(season, wind_direction) %>%
+  mutate(
+    prop  = n / sum(n),
+    total = sum(n)
+  ) %>%
+  filter(total > 30) %>% 
+  ungroup() %>%
+  ggplot(aes(x = wind_direction, y = total, fill = beaufort)) +
 
+  geom_col(width = 1, color = "grey30") +
+
+  # # geom_text(
+  #   data = . %>% distinct(season, wind_direction, total),
+  #   aes(x = wind_direction, y = 1.08, label = total),
+  #   inherit.aes = FALSE,
+  #   size = 2.8,
+  #   fontface = "bold"
+  # ) +
+
+  scale_fill_manual(values = beaufort_palette, drop = FALSE) +
+  scale_x_discrete(limits = directions) +
+  scale_y_continuous(limits = c(0,800)
+  ) +
+
+  coord_polar(theta = "x", start = 7*pi/4, direction = -1) +
+
+  facet_wrap(~ season, nrow = 2) +
+
+  labs(
+    title = "Seasonal Wind Direction and Strength",
+    subtitle = "Each panel shows Beaufort composition by direction\nNumbers indicate seasonal sample size",
+    fill = "Beaufort scale"
+  ) +
+
+  theme_minimal(base_size = 15) +
+  theme(
+    panel.grid.major = element_line(color = "grey85"),
+    panel.grid.minor = element_blank(),
+    axis.title = element_blank(),
+    axis.text.x = element_text(size = 14, face = "bold"),
+    axis.text.y = element_text(size = 14),
+    plot.title = element_text(face = "bold"),
+    strip.text = element_text(face = "bold"),
+    legend.position = "right"
+  )
+
+ggsave(filename = "beaufort_rose_season.jpg", width = 10, height = 12)
 
 ```
 ```{r}
+journal_wind_df %>%
+  filter(
+    !is.na(wind_direction),
+    !is.na(beaufort),
+    !is.na(season),
+    wind_direction !="No wind",
+  ) %>%
+  mutate(beaufort = factor(beaufort, ordered = TRUE)) %>%
+  count(season, wind_direction, beaufort) %>%
+  group_by(season, wind_direction) %>%
+  mutate(
+    prop  = n / sum(n),
+    total = sum(n)
+  ) %>%
+  ungroup() %>%
+  ggplot(aes(x = wind_direction, y = prop, fill = beaufort)) +
 
-journal_wind_df$dir_bin <- cut(
-  journal_wind_df$wind_dir_math_real,
-  breaks = seq(0, 360, by = 45),
-  include.lowest = TRUE
+  geom_col(width = 0.75, color = "grey30") +
+
+  geom_text(
+    data = . %>% distinct(season, wind_direction, total),
+    aes(x = wind_direction, y = 1.05, label = total),
+    inherit.aes = FALSE,
+    size = 3.1,
+    fontface = "bold"
+  ) +
+
+  scale_x_discrete(
+    limits = c("N","NNE","NE","E","ESE","SE","S","SSW","SW","W","WNW","NW","No wind")
+  ) +
+  scale_fill_manual(values = beaufort_palette, drop = FALSE) +
+  scale_y_continuous(
+    labels = scales::percent_format(),
+    expand = expansion(mult = c(0, 0.15))
+  ) +
+
+  facet_wrap(~ season, ncol = 1) +
+
+  labs(
+    title = "Seasonal Wind Direction and Strength",
+    subtitle = "100% stacked bars by season\nNumbers above bars = seasonal sample size",
+    x = "Wind direction",
+    y = "Proportion of observations",
+    fill = "Beaufort scale"
+  ) +
+
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(color = "black", face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    strip.text = element_text(face = "bold", size = 19, vjust = -.2)
+  )
+
+ggsave(filename = "beaufort_histo_season.jpg", width = 10, height = 12)
+```
+
+
+```{r}
+
+
+directions <- c(
+  "N","NNW","NW","WNW","W","WSW","SW","SSW","S","SSE","SE","ESE","E","ENE","NE","NNE"
 )
 
-freq_tbl_bin <- with(journal_wind_df,
-                     table(beaufort, dir_bin))
+journal_wind_df %>%
+  filter(
+    wind_direction %in% directions,   # replaces != "No wind"
+    !is.na(beaufort)
+  ) %>%
+  mutate(beaufort = factor(beaufort, ordered = TRUE)) %>%
+  count(wind_direction, beaufort) %>%
+  group_by(wind_direction) %>%
+  mutate(
+    prop  = n / sum(n),
+    total = sum(n)
+  ) %>%
+  ungroup() %>%
+  ggplot(aes(x = wind_direction, y = prop, fill = beaufort)) +
 
-barplot(freq_tbl_bin, las = 2)
+  # stacked proportional bars → wind rose wedges
+  geom_col(
+    width = 1,
+    color = "grey30",
+    position = "stack"
+  ) +
+
+  # total sample size annotation per direction
+  geom_text(
+    data = . %>% distinct(wind_direction, total),
+    aes(
+      x = wind_direction,
+      y = 1.08,
+      label = total
+    ),
+    inherit.aes = FALSE,
+    size = 3,
+    fontface = "bold"
+  ) +
+
+  # KEEP the same Beaufort colors
+  scale_fill_manual(values = beaufort_palette, drop = FALSE) +
+
+  # IMPORTANT: lock compass ordering without factoring
+  scale_x_discrete(limits = directions) +
+
+  # proportions, with headroom for labels
+  scale_y_continuous(
+    labels = scales::percent_format(),
+    limits = c(0, 1.1),
+    expand = c(0, 0)
+  ) +
+
+  # wind rose orientation
+  coord_polar(theta = "x", start = 29*pi/15, direction = -1) +
+
+  labs(
+    title = "Wind Direction and Strength (Wind Rose)",
+    subtitle = "Stacked by Beaufort category\nNumbers indicate sample size per direction",
+    fill = "Beaufort scale"
+  ) +
+
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major = element_line(color = "grey85"),
+    panel.grid.minor = element_blank(),
+    axis.title = element_blank(),
+    axis.text.x = element_text(size = 10, face = "bold"),
+    axis.text.y = element_text(size = 9),
+    plot.title = element_text(face = "bold"),
+    legend.position = "right"
+  )
+
+
+
+```
+
+
+
+```{r}
+beaufort_palette <- c(
+  "#f7fbff", "#deebf7", "#c6dbef", "#9ecae1",
+  "#6baed6", "#4292c6", "#2171b5", "#08519c",
+  "#08306b", "#4d004b", "#810f7c"
+)
+
+library(scico)
+
+scale_fill_scico(palette = "lajolla", direction = 1)
 
 
 ```
 
 
 ```{r}
+journal_wind_df %>%
+  mutate(
+    wind_direction = factor(
+      wind_direction,
+      levels = c("N", "NE", "E", "SE", "S", "SW", "W", "NW")
+    )
+  ) %>%
+  count(wind_direction) %>%
+  ggplot(aes(x = wind_direction, y = n)) +
+  geom_col(width = 0.75) +
+  geom_text(aes(label = n), vjust = -0.3, size = 3) +
+  labs(
+    title = "Frequency of Wind by Direction",
+    subtitle = "All observations",
+    x = "Wind direction",
+    y = "Number of observations"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
 
-hist(journal_wind_df$wind_dir_math_real,
-     breaks = seq(0, 360, by = 15),
-     freq = TRUE,
-     main = "Wind Direction Frequency",
-     xlab = "Degrees")
+```
 
-with(subset(journal_wind_df, beaufort >= 4),
-     hist(wind_dir_math_real, breaks = seq(0, 360, by = 15),
-          add = TRUE, col = rgb(1, 0, 0, 0.3)))
+
+# How strong is the wind when it comes from each direction?
+```{r}
+
+journal_wind_df %>%
+  count(wind_direction, beaufort) %>%
+  ggplot(aes(x = wind_direction, y = beaufort, fill = n)) +
+  geom_tile() +
+  labs(
+    title = "Wind Strength by Direction",
+    x = "Wind direction",
+    y = "Beaufort category",
+    fill = "Count"
+  ) +
+  theme_minimal()
+
+```
+
+# How does wind strength change over time?
+```{r}
+ggplot(journal_wind_df, aes(x = month_numeric, y = as.numeric(beaufort))) +
+  geom_violin(trim = FALSE) +
+  labs(
+    title = "Monthly Distribution of Wind Strength",
+    x = "Month",
+    y = "Beaufort scale"
+  ) +
+  theme_minimal()
+
+```
+```{r}
+library(ggplot2)
+library(scales)
+
+journal_wind_df %>%
+  filter(!is.na(beaufort), !is.na(month_numeric)) %>%
+  mutate(
+    month = factor(
+      month_numeric,
+      levels = 1:12,
+      labels = month.abb
+    )
+  ) %>%
+  ggplot(aes(x = month, y = as.numeric(beaufort))) +
+
+  # distribution
+  geom_violin(
+    trim = FALSE,
+    fill = "grey80",
+    color = "grey30",
+    linewidth = 0.4
+  ) +
+
+  # central tendency (very important for interpretation)
+  stat_summary(
+    fun = median,
+    geom = "point",
+    size = 1.8,
+    color = "black"
+  ) +
+
+  # optional IQR cue (subtle but helpful)
+  stat_summary(
+    fun.data = median_hilow,
+    fun.args = list(conf.int = 0.5),
+    geom = "linerange",
+    linewidth = 0.8,
+    color = "black"
+  ) +
+
+  scale_y_continuous(
+    breaks = pretty_breaks(),
+    expand = expansion(mult = c(0.02, 0.05))
+  ) +
+
+  labs(
+    title = "Monthly Distribution of Wind Strength",
+    subtitle = "Violin width indicates density; points show medians",
+    x = "Month",
+    y = "Beaufort scale"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(color = "black"),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(size = 10)
+  )
+
+```
+
+
+
+
+```{r}
+
+journal_wind_df <- journal_wind_df %>%
+  dplyr::filter(
+    date_mdy >= as.POSIXct("1871-01-01 00:00:00", tz = "UTC") &
+    date_mdy <= as.POSIXct("1886-12-31 23:59:59", tz = "UTC")
+  )
+
+
+ggplot(journal_wind_df, aes(x = date_mdy, y = as.numeric(beaufort))) +
+  geom_point(alpha = 0.25, size = 0.6) +
+  labs(
+    title = "Wind Strength Over Time",
+    x = "Date",
+    y = "Beaufort scale"
+  ) +
+  theme_minimal()
+
+```
+
+```{r}
+ggplot(journal_wind_df, aes(x = date_mdy, y = as.numeric(beaufort))) +
+  geom_point(alpha = 0.2, size = 0.5) +
+  geom_smooth(
+    method = "loess",
+    span = 0.2,
+    se = FALSE
+  ) +
+  labs(
+    title = "Smoothed Wind Strength Over Time",
+    x = "Date",
+    y = "Beaufort scale"
+  ) +
+  theme_minimal()
+
+```
+
+```{r}
+journal_wind_df %>%
+  mutate(year_month = floor_date(date_mdy, "month")) %>%
+  filter(date_mdy >= as.Date("1876-01-01") &
+         date_mdy <= as.Date("1876-12-31")) %>%
+  group_by(year_month) %>%
+  summarise(
+    mean_beaufort = mean(as.numeric(beaufort), na.rm = TRUE),
+    sd_beaufort   = sd(as.numeric(beaufort), na.rm = TRUE),
+    n = n()
+  ) %>%
+  ggplot(aes(x = year_month, y = mean_beaufort)) +
+  geom_line() +
+  geom_ribbon(
+    aes(
+      ymin = mean_beaufort - sd_beaufort,
+      ymax = mean_beaufort + sd_beaufort
+    ),
+    alpha = 0.2
+  ) +
+  labs(
+    title = "Monthly Mean Wind Strength with Variability",
+    x = "Date",
+    y = "Mean Beaufort scale"
+  ) +
+  theme_minimal()
+
 
 
 ```
+```{r}
+journal_wind_df %>%
+  mutate(
+    date_mdy = as.Date(date_mdy),   # <-- convert POSIX to Date
+    year_month = floor_date(date_mdy, "month"),
+    month = month(year_month, label = TRUE),
+    season = case_when(
+      month %in% c("Dec", "Jan", "Feb") ~ "Winter",
+      month %in% c("Mar", "Apr", "May") ~ "Spring",
+      month %in% c("Jun", "Jul", "Aug") ~ "Summer",
+      TRUE ~ "Fall"
+    )
+  ) %>%
+  group_by(year_month, season) %>%
+  summarise(
+    mean_beaufort = mean(as.numeric(beaufort), na.rm = TRUE),
+    sd_beaufort   = sd(as.numeric(beaufort), na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  ggplot(aes(x = year_month, y = mean_beaufort)) +
+  geom_line(color = "black") +
+  geom_ribbon(
+    aes(
+      ymin = mean_beaufort - sd_beaufort,
+      ymax = mean_beaufort + sd_beaufort
+    ),
+    alpha = 0.2
+  ) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "3 months") +
+  labs(
+    title = "Monthly Mean Wind Strength with Seasonal Context",
+    x = "Month",
+    y = "Mean Beaufort scale"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
+
+ggsave(filename = "beaufort_time_series.jpg", width = 20, height = 6)
+
+```
+
+
+```{r}
+journal_wind_df %>%
+  filter(
+    !is.na(wind_direction),
+    tolower(wind_direction) != "no wind"
+  ) %>%
+  mutate(
+    date_mdy = as.Date(date_mdy),
+    year_month = floor_date(date_mdy, "month"),
+    month = month(year_month, label = TRUE),
+    season = case_when(
+      month %in% c("Dec", "Jan", "Feb") ~ "Winter",
+      month %in% c("Mar", "Apr", "May") ~ "Spring",
+      month %in% c("Jun", "Jul", "Aug") ~ "Summer",
+      TRUE ~ "Fall"
+    )
+  ) %>%
+  group_by(year_month, season) %>%
+  summarise(
+    n_reports = n(),
+    .groups = "drop"
+  ) %>%
+  ggplot(aes(x = year_month, y = n_reports)) +
+  geom_line(color = "black") +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "3 months") +
+  labs(
+    title = "Frequency of Wind Direction Reports Over Time",
+    x = "Month/Year",
+    y = "Number of direction reports"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
+
+ggsave(filename = "direction_time_series.jpg", width = 20, height = 6)
+```
+```{r}
+journal_wind_df %>%
+  filter(
+    !is.na(wind_speed_description),
+    wind_speed_description != ""
+  ) %>%
+  mutate(
+    date_mdy = as.Date(date_mdy),
+    year_month = floor_date(date_mdy, "month"),
+    month = month(year_month, label = TRUE),
+    season = case_when(
+      month %in% c("Dec", "Jan", "Feb") ~ "Winter",
+      month %in% c("Mar", "Apr", "May") ~ "Spring",
+      month %in% c("Jun", "Jul", "Aug") ~ "Summer",
+      TRUE ~ "Fall"
+    )
+  ) %>%
+  group_by(year_month, season) %>%
+  summarise(
+    n_reports = n(),
+    .groups = "drop"
+  ) %>%
+  ggplot(aes(x = year_month, y = n_reports)) +
+  geom_line(color = "black") +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "3 months") +
+  labs(
+    title = "Frequency of Wind Speed Descriptions Over Time",
+    x = "Month/Year",
+    y = "Number of wind speed reports"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
+ggsave(filename = "speed_time_series.jpg", width = 20, height = 6)
+```
+
+
+
+# Are some directions seasonally stronger/weaker?
+
+
+
+# Is variability as important as central tendency?
+
+```{r}
+
+ggplot(journal_wind_df, aes(x = wind_direction, y = as.numeric(beaufort))) +
+  geom_boxplot() +
+  labs(
+    title = "Variability of Wind Strength by Direction",
+    x = "Wind direction",
+    y = "Beaufort scale"
+  ) +
+  theme_minimal()
+
+```
+```{r}
+directions <- c(
+  "N","NNW","NW","WNW","W","WSW","SW","SSW","S","SSE","SE","ESE","E","ENE","NE","NNE"
+)
+
+ggplot(journal_wind_df, aes(x = wind_direction, y = as.numeric(beaufort))) +
+  geom_boxplot() +
+  scale_x_discrete(limits = directions) +   # orders directions properly
+  labs(
+    title = "Variability of Wind Strength by Direction",
+    x = "Wind direction",
+    y = "Beaufort scale"
+  ) +
+  theme_minimal()
+
+```
+
+
+```{r}
+directions <- c(
+  "N","NNW","NW","WNW","W","WSW","SW","SSW","S","SSE","SE","ESE","E","ENE","NE","NNE"
+)
+
+ggplot(journal_wind_df, aes(x = wind_direction, y = as.numeric(beaufort))) +
+  geom_boxplot() +
+  scale_x_discrete(limits = directions) +   # orders directions properly
+  facet_wrap(~ season) +
+  labs(
+    title = "Directional Wind Variability by Season",
+    x = "Wind direction",
+    y = "Beaufort scale"
+  ) +
+  theme_minimal()
+
+ggsave(filename = "beaufortbox.jpg", width = 15, height = 6)
+
+```
+```{r}
+directions <- c("N", "W", "S", "E")
+
+wind_common <- journal_wind_df %>%
+  filter(
+    wind_direction %in% directions,
+    !is.na(beaufort),
+    !is.na(season)
+  ) %>%
+  group_by(season, wind_direction) %>%
+  mutate(total = n()) %>%
+  filter(total > 30) %>%   # SAME threshold as rose
+  ungroup()
+
+```
+
+```{r}
+ggplot(
+  wind_common,
+  aes(
+    x = factor(wind_direction, levels = directions),
+    y = as.numeric(beaufort)
+  )
+) +
+  geom_boxplot(
+    width = 0.7,
+    outlier.alpha = 0.4
+  ) +
+  facet_wrap(~ season, nrow = 2) +
+  labs(
+    title = "Directional Wind Variability by Season",
+    subtitle = "Boxplots use the same directions and datapoints as the wind rose",
+    x = "Wind direction",
+    y = "Beaufort scale"
+  ) +
+  theme_minimal(base_size = 15) +
+  theme(
+    strip.text = element_text(face = "bold"),
+    axis.text.x = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
+
+ggsave(filename = "beaufortbox.jpg", width = 15, height = 6)
+```
+
+
 
 ```{r}
 
@@ -854,6 +1870,7 @@ ggplot(
 
 
 ```
+
 
 
 
@@ -891,48 +1908,35 @@ ggplot(plot_df, aes(x = wind_dir_math_real)) +
 
 
 
+
 ```{r}
+
+
 ggplot(
-  journal_wind_df |> 
-    filter(!is.na(wind_direction), !is.na(beaufort)),
-  aes(x = wind_direction, fill = factor(beaufort))
+  journal_wind_df |>
+    filter(!is.na(wind_direction), !is.na(beaufort), wind_direction != "No wind") |>
+    mutate(wind_direction = factor(wind_direction, levels = c("N","NE","E","SE","S","SW","W","NW"))),
+  aes(x = factor(beaufort), fill = factor(beaufort))
 ) +
-  geom_bar(position = "stack") +
+  geom_bar() +
+  facet_wrap(~ wind_direction, scales = "free_y") +  # one panel per direction
   labs(
-    x = "Wind direction",
+    title = "Beaufort Distribution by Wind Direction",
+    x = "Beaufort",
     y = "Count",
     fill = "Beaufort"
+  ) +
+  scale_fill_brewer(palette = "Spectral") +
+  theme_minimal() +
+  theme(
+    text = element_text(size = 12),
+    strip.text = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5, face = "bold")
   )
 
 
-
 ```
 
-
-```{r}
-journal_wind_df |> 
-  filter(!is.na(wind_dir_math_real), !is.na(beaufort)) |>
-  mutate(dir_bin = cut(
-    wind_dir_math_real,
-    breaks = seq(0, 360, 45),
-    labels = c("N","NE","E","SE","S","SW","W","NW"),
-    include.lowest = TRUE
-  )) |>
-  ggplot(aes(x = dir_bin, fill = factor(beaufort))) +
-  geom_bar(position = "fill") +
-  labs(
-    x = "Wind direction",
-    y = "Proportion",
-    fill = "Beaufort"
-  )
-
-```
-```{r}
-journal_wind_df |>
-  filter(wind_direction == "No wind", !is.na(beaufort)) |>
-  print(n = Inf)
-
-```
 
 
 # How many instances of directional data with no speed?
@@ -1061,23 +2065,10 @@ windRose(
 
 
 ```
-```{r}
 
-ggplot(missing_speed, aes(wind_meteor)) +
-  geom_histogram(binwidth = 30) +
-  coord_polar()
 
-```
-```{r}
 
-missing_speed$count <- 1
 
-ggplot(missing_speed, aes(x = wind_direction, y = count)) +
-  stat_summary(fun = sum, geom = "col") +
-  coord_polar() +
-  labs(x = "", y = "Frequency")
-
-```
 ```{r}
 
 freq <- missing_speed %>%
@@ -1088,6 +2079,7 @@ ggplot(freq, aes(wind_direction, month, fill = n)) +
   coord_polar()
 
 ```
+
 ```{r}
 
 
@@ -1097,13 +2089,17 @@ month_levels <- c(
 )
 
 directions <- c(
-  "N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"
+  "N","W","S","E"
 )
 
 freq <- missing_speed %>%
   mutate(month = factor(month, levels = month_levels),
-         wind_direction = factor(wind_direction, levels = directions)) %>%
-  count(month, wind_direction) %>%
+         wind_direction = factor(wind_direction, levels = directions),
+         season = season) %>%
+   filter(
+    !is.na(wind_direction),
+  ) %>%
+  count(month, wind_direction, season) %>%
   complete(month, wind_direction, fill = list(n = 0)) %>%
   mutate(n_fill = ifelse(n == 0, NA, n))
 
@@ -1118,13 +2114,96 @@ ggplot(freq, aes(wind_direction, month, fill = n_fill)) +
   ) +
   scale_y_discrete(limits = rev(month_levels)) +
   labs(
-    title = "Missing Speed Data Counts by Month",
-    x = "Wind Direction",
-    y = "Month"
+    title = "Missing Wind Speed Observations by Season"
   ) +
-  coord_polar(theta = "x", start = 29*pi/15, direction = -1)
+  facet_wrap(~ season, nrow = 2) +
+  
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major = element_line(color = "grey85"),
+    panel.grid.minor = element_blank(),
+    axis.title = element_blank(),
+    axis.text.x = element_text(size = 10, face = "bold"),
+    axis.text.y = element_text(size = 9),
+    plot.title = element_text(face = "bold"),
+    legend.position = "right"
+  ) +
+  coord_polar(theta = "x", start = 7*pi/4, direction = -1)
 
 # ,"WNW","ESE","SSW","SSE"
+
+ggsave(filename = "missing_wind_season.jpg", width = 10, height = 12)
+```
+```{r}
+freq2 <- freq %>%
+  mutate(
+    month_num = as.integer(month)
+  )
+
+```
+
+```{r}
+
+ggplot(freq, aes(
+  x = wind_direction,
+  y = month,
+  fill = n_fill
+)) +
+
+  geom_col(
+    width = 1,
+    color = "grey30"
+  ) +
+
+  scale_fill_gradient(
+    low = "lightblue",
+    high = "navy",
+    na.value = "white",
+    name = "Count"
+  ) +
+
+  scale_y_discrete(limits = rev(month_levels)) +
+
+  scale_y_continuous(
+    breaks = seq_along(month_levels),
+    labels = month_levels
+  ) +
+
+  coord_polar(theta = "x", start = 29*pi/15, direction = -1) +
+  geom_text(
+  data = dir_totals,
+  aes(
+    x = wind_direction,
+    y = 85,
+    label = total
+  ),
+  inherit.aes = FALSE,
+  size = 3,
+  fontface = "bold"
+)+
+
+
+  labs(
+    title = "Missing Wind Speed Observations by Direction and Month",
+    subtitle = "Radial bands represent months; color indicates number of missing records"
+  ) +
+
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major = element_line(color = "grey85"),
+    panel.grid.minor = element_blank(),
+    axis.title = element_blank(),
+    axis.text.x = element_text(size = 10, face = "bold"),
+    axis.text.y = element_text(size = 9),
+    plot.title = element_text(face = "bold"),
+    legend.position = "right"
+  )
+
+```
+```{r}
+dir_totals <- freq %>%
+  group_by(wind_direction) %>%
+  summarise(total = sum(n), .groups = "drop")
 
 ```
 
@@ -1220,11 +2299,11 @@ unique_df_cols <- df_cols %>%
 
 ```{r}
 
-journals_duplicates <- journals [
-  duplicated(journals$date_mdy) | duplicated(journals$date_mdy, fromLast = TRUE),
+journals_duplicates2 <- journals2 [
+  duplicated(journals2$date_mdy) | duplicated(journals2$date_mdy, fromLast = TRUE),
 ]
 
-journals_duplicates <- journals_duplicates %>%
+journals_duplicates2 <- journals_duplicates2 %>%
   arrange(date_mdy)
 
 
@@ -1613,15 +2692,142 @@ ggplot() +
                arrow = arrow(type = "closed", length = unit(0.1, "inches")), alpha = 0.3) +
   theme_minimal() +
   labs(x = "Longitude", y = "Latitude") +
-  ggtitle('Year {closest_state}') +
+  ggtitle('Wind Direction and Strength — {closest_state}') +
   scale_color_viridis_c() +
   transition_states(year) # Use transition_manual to control frames manually
 
 animate(p, renderer = gifski_renderer(), duration = 50, nframes = 500)
 
+anim <- animate(
+  p,
+  renderer = gifski_renderer(),
+  duration = 40,
+  nframes = 400,
+  width = 800,
+  height = 600,
+  res = 120
+)
+
+anim_save("wind_vectors_animation1.gif", animation = anim)
+
 
   
 ```
+```{r}
+library(ggplot2)
+library(gganimate)
+library(gifski)
+library(lubridate)
+library(viridis)
+
+test <- journal_wind_df |>
+  drop_na(longitude.y, latitude.y, u_vector, v_vector) |>
+  mutate(
+    longitude.y = as.numeric(longitude.y),
+    latitude.y  = as.numeric(latitude.y),
+    year = year(as_date(date_mdy)),
+    u_plot = u_vector * 0.2,   # scale for visual clarity
+    v_plot = v_vector * 0.2
+  )
+
+p <- ggplot(test) +
+  geom_segment(
+    aes(
+      x = longitude.y,
+      y = latitude.y,
+      xend = longitude.y + u_plot,
+      yend = latitude.y + v_plot,
+      color = vector_magnitude
+    ),
+    arrow = arrow(type = "closed", length = unit(0.06, "inches")),
+    linewidth = 0.3,
+    alpha = 0.4
+  ) +
+  coord_fixed() +
+  scale_color_viridis_c(
+    name = "Wind strength",
+    option = "C"
+  ) +
+  labs(
+    title = "Wind direction and strength — {closest_state}",
+    subtitle = "Arrows show direction wind is coming from; color indicates magnitude",
+    x = "Longitude",
+    y = "Latitude"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(face = "bold")
+  ) +
+  transition_states(
+    year,
+    transition_length = 2,
+    state_length = 1
+  ) +
+  ease_aes("linear")
+
+animate(
+  p,
+  renderer = gifski_renderer(),
+  duration = 40,
+  nframes = 400
+)
+
+anim <- animate(
+  p,
+  renderer = gifski_renderer(),
+  duration = 40,
+  nframes = 400,
+  width = 800,
+  height = 600,
+  res = 120
+)
+
+anim_save("wind_vectors_animation2.gif", animation = anim)
+
+
+```
+```{r}
+bounds <- test %>%
+  summarise(
+    xmin = min(longitude.y, na.rm = TRUE),
+    xmax = max(longitude.y, na.rm = TRUE),
+    ymin = min(latitude.y, na.rm = TRUE),
+    ymax = max(latitude.y, na.rm = TRUE)
+  )
+
+pad <- 0.2  # degrees; adjust to taste
+
+```
+
+```{r}
+p <- test |>
+  ggplot() +
+  geom_segment(
+    aes(
+      x = longitude.y,
+      y = latitude.y,
+      xend = longitude.y + u_vector,
+      yend = latitude.y + v_vector,
+      color = vector_magnitude
+    ),
+    arrow = arrow(type = "closed", length = unit(0.08, "inches")),
+    alpha = 0.3,
+    linewidth = 0.4
+  ) +
+  coord_fixed(
+    xlim = c(bounds$xmin - pad, bounds$xmax + pad),
+    ylim = c(bounds$ymin - pad, bounds$ymax + pad),
+    expand = FALSE
+  ) +
+  scale_color_viridis_c(option = "C") +
+  theme_minimal(base_size = 13) +
+  labs(x = "Longitude", y = "Latitude") +
+  ggtitle("Year {closest_state}") +
+  transition_states(year)
+
+```
+
 
 # Trying to add day and month now # Laurie and Frances are here 
 
