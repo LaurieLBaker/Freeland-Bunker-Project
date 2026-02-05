@@ -77,17 +77,17 @@ extract_wind_direction <- function(entry) {
 }
 
 # # Mutate a new column with the wind direction notation
-journals_wind_reference <- journals %>%
+journals_wind_reference <- journals |>
   mutate(Wind_Direction = sapply(journal_entry, extract_wind_direction))
 
 #combine journal_entry and wind_direction_am into a new tibble
-journals_combined <- journals %>%
-  select(journal_entry, wind_direction_am) %>%
+journals_combined <- journals |>
+  select(journal_entry, wind_direction_am) |>
   as_tibble()
 
 # Define a function to search for a given prevailing wind direction
 search_wind_direction <- function(wind_direction) {
-  results <- journals_combined %>%
+  results <- journals_combined |>
     filter(grepl(wind_direction, wind_direction_am, ignore.case = TRUE))
   return(results)
 }
@@ -106,6 +106,10 @@ print(search_results)
 ```{r extract-wind-references}
 
 # Wind Search Wind Before and After ----
+
+# - (?i) means case-insensitive matching
+# - \\b is a word boundary (matches "wind", "wind," "wind." but not "upwind")
+# - \\s+ one or more whitespace characters
 
 ## Patterns to capture "North" wind references ----
 N_wind <- c(
@@ -373,13 +377,190 @@ wind_patterns <- list(
     WSW = WSW_wind
 )
 
+
+## Including direction tokens
+
+# Step A: Match any clause containing wind + a direction token anywhere after it.
+
+# Step B: Extract the direction token with stringr::str_extract().
+
+
+library(stringr)
+
+# -------------------------
+# Step A: Match any clause containing "wind" + a direction token anywhere after it
+# -------------------------
+# Define "direction tokens" (16-point + common word forms) as ONE regex.
+# - Allows: N, N., N W, N.W., N.N.W., NNW, Northward, Northerly, etc.
+# - Allows: "North East", "North-East", "Northeast", etc.
+# - Includes: "calm" / "variable" only if you want them (commented out).
+
+library(stringr)
+
+# --- Put longer patterns FIRST ---
+dir_token <- paste0(
+  "(?i)(?<!')\\b(",
+  paste(c(
+    # 3-letter (16-point) FIRST
+    "N\\.N\\.E\\.|N\\.N\\.W\\.|E\\.N\\.E\\.|E\\.S\\.E\\.|S\\.S\\.E\\.|S\\.S\\.W\\.|W\\.S\\.W\\.|W\\.N\\.W\\.",
+    "NNE|NNW|ENE|ESE|SSE|SSW|WSW|WNW",
+    "N\\s*\\.?\\s*N\\s*\\.?\\s*E|N\\s*\\.?\\s*N\\s*\\.?\\s*W|E\\s*\\.?\\s*N\\s*\\.?\\s*E|E\\s*\\.?\\s*S\\s*\\.?\\s*E|S\\s*\\.?\\s*S\\s*\\.?\\s*E|S\\s*\\.?\\s*S\\s*\\.?\\s*W|W\\s*\\.?\\s*S\\s*\\.?\\s*W|W\\s*\\.?\\s*N\\s*\\.?\\s*W",
+
+    # 2-letter (8-point) next
+    "N\\.E\\.|N\\.W\\.|S\\.E\\.|S\\.W\\.",
+    "NE|NW|SE|SW",
+    "N\\s*\\.?\\s*E|N\\s*\\.?\\s*W|S\\s*\\.?\\s*E|S\\s*\\.?\\s*W",
+
+    # Wordy multi-word forms (also before singles)
+    "West[-\\s]+North[-\\s]+West",
+    "North[-\\s]*Northeast|North[-\\s]*Northwest|South[-\\s]*Southeast|South[-\\s]*Southwest",
+    "East[-\\s]*Northeast|East[-\\s]*Southeast|West[-\\s]*Northwest|West[-\\s]*Southwest",
+    "North[-\\s]*East|North[-\\s]*West|South[-\\s]*East|South[-\\s]*West",
+
+    # Cardinal word forms
+    "N(?:orth)?(?:ward|erly|ly)?",
+    "E(?:ast)?(?:ward|erly|ly)?",
+    "S(?:outh)?(?:ward|erly|ly)?",
+    "W(?:est)?(?:ward|erly|ly)?",
+
+    # Single-letter LAST (so they don't steal E.N.E.)
+    "N|E|S|W"
+  ), collapse = "|"),
+  ")\\b"
+)
+
+wind_clause_regex <- paste0("(?i)\\bwind\\b[^\\n\\.;:]*?", dir_token, "[^\\n\\.;:]*")
+
+# Example: get the clause (optional, but often useful for debugging)
+extract_wind_clause <- function(x) {
+  str_extract(x, wind_clause_regex)
+}
+
+# -------------------------
+# Step B: Extract the direction token with stringr::str_extract()
+# -------------------------
+# First grab the wind clause, then pull out the first direction token from it.
+extract_first_wind_direction <- function(x) {
+  clause <- str_extract(x, wind_clause_regex)
+  str_extract(clause, dir_token)
+}
+
+
+
+
+extract_second_wind_direction <- function(x) {
+  clause <- str_extract(x, wind_clause_regex)
+  
+  tokens <- str_extract_all(clause, dir_token)
+  
+  sapply(tokens, function(t) {
+    if (length(t) >= 2) t[2] else NA_character_
+  })
+}
+
+## Normalize
+
+compass_map <- c(
+  # Cardinal
+  "north" = "N",
+  "south" = "S",
+  "east"  = "E",
+  "west"  = "W",
+
+  # Intercardinal (ordinal)
+  "northeast" = "NE",
+  "northwest" = "NW",
+  "southeast" = "SE",
+  "southwest" = "SW",
+
+  # Secondary intercardinal
+  "northnortheast" = "NNE",
+  "eastnortheast"  = "ENE",
+  "eastsoutheast"  = "ESE",
+  "southsoutheast" = "SSE",
+  "southsouthwest" = "SSW",
+  "westsouthwest"  = "WSW",
+  "westnorthwest"  = "WNW",
+  "northnorthwest" = "NNW",
+
+  # Tertiary (by-points)
+  "northbyeast" = "NbE",
+  "northeastbyeast" = "NEbE",
+  "eastnortheast" = "ENE",
+  "eastbyeast" = "EbE",
+  "eastbysouth" = "EbS",
+  "eastsoutheast" = "ESE",
+  "southeastbysouth" = "SEbS",
+  "southbyeast" = "SbE",
+  "southbysouth" = "SbS",
+  "southsouthwest" = "SSW",
+  "southwestbysouth" = "SWbS",
+  "westbysouth" = "WbS",
+  "westbywest" = "WbW",
+  "westbynorth" = "WbN",
+  "westnorthwest" = "WNW",
+  "northwestbynorth" = "NWbN",
+  "northbynorth" = "NbN",
+  "northnorthwest" = "NNW"
+)
+
+
+# -------------------------
+# Usage on a character vector `journal_entry`
+# -------------------------
+journal_data$wind_clause      <- extract_wind_clause(journal_data$journal_entry)
+journal_data$wind_dir_token   <- extract_first_wind_direction(journal_data$journal_entry)
+
+journal_data$wind_dir_token_2   <- extract_second_wind_direction(journal_data$journal_entry)
+
+normalize_direction <- function(x) {
+
+  x_clean <- tolower(x)
+
+  # remove punctuation & spaces
+  x_clean <- gsub("[^a-z]", "", x_clean)
+
+  # handle simple abbreviations like n, nw, sse
+  abbr <- toupper(x_clean)
+  if (abbr %in% c(
+    "N","S","E","W",
+    "NE","NW","SE","SW",
+    "NNE","ENE","ESE","SSE",
+    "SSW","WSW","WNW","NNW"
+  )) return(abbr)
+
+  # look up word forms
+  if (x_clean %in% names(compass_map))
+    return(compass_map[[x_clean]])
+
+  # otherwise return NA
+  return(NA_character_)
+}
+
+journal_data$wind_dir_clean <- vapply(
+  journal_data$wind_dir_token,
+  normalize_direction,
+  character(1)
+)
+
+journal_data$wind_dir_clean_2 <- vapply(
+  journal_data$wind_dir_token_2,
+  normalize_direction,
+  character(1)
+)
+
+
+journal_data |> filter(!is.na(wind_mentioned)) |> select(journal_entry, wind_clause, wind_dir_token, wind_dir_token_2, wind_mentioned, wind_dir_clean, wind_dir_clean_2)
 ```
 
-```{r}
+```{r wind-speed-patterns}
 
 # Wind speed patterns 
 
 wind_speed_patterns <- "(?i)\\b(strong|powerful|heavy|intense|light|gentle|soft|calm|still|moderate|steady|gusty|blustery|variable|baffling|fresh|squally|brisk|stormy|tempestuous|strong|powerful|heavy|intense|light|gentle|soft|calm|still|moderate|steady|gusty|blustery|variable|calm|pleasant|fine|clear|light|fresh breeze|scant|fine|clam|clear|light|cleared of wind|smooth|baffling wind|eased|light air|fesh|dead calm|died out|hair|no wind|becalmed|not wind enough|baffling|becalmed|cleared up|very light air of wind|light air|perfectly calm|hazed up|wind out|hauling little|baffling|fresh|squally|brisk|stormy|tempestuous|moderate|fresh breeze|strong breeze|smart breeze|fresh blow good breeze|very fresh breeze|moderating|blowy|blowing|variable|breezing|whole sail breeze|changeable|fresh trade winds|high|peak breeze|mederate|fine|perfect|hauled down|steady|fine|wind increasing|breezed up|increasing|wind out|baffling and moderate|blustering|heavy blow|heavy|strong|rough|windstorm |big storm |heavy breeze|gale|stronger|tremendous|squall|hard|blowing a gale|hauled|squalls|hauling|terrific storm |blowing hard|squalls|perfect gale|squall|high winds|blew very heavy|fearfuly|blowed fearfuly|hauling out|rain squalls|growing rough|very moderate, calm|fresh breeze, rough|heavy blow, rough|sair|mode|wind increasing|wind out|squall, moderate|bills of laden wind|hauling little)\\b"
+
+wind_speed_patterns_stem_variants <- "(?i)\\b(strong(er)?|power(ful)?|heav(y|ier)?|intens(e|ity)?|light|gentl(e|y)?|soft|calm|clam|still|moder(ate|ating)?|mederate|mode|steady|gust(y|ing)?|bluster(ed|ing|y)?|blow(y|ing)?|brisk|variabl(e|y)?|changeabl(e|y)?|baffl(e|ed|ing)?|fresh|pleasant|fine|clear|perfect|smooth|eas(e|ed|ing)?|squall(s|y|ing)?|rain\\s+squall(s|y)?|storm(y|ier)?|tempest(uous|uousness)?|windstorm(s)?|big\\s+storm(s)?|terrific\\s+storm(s)?|tremendous|gale(s)?|perfect\\s+gale(s)?|high\\s+wind(s)?|hard|rough|grow(ing)?\\s+rough|fresh\\s+breeze|strong\\s+breeze|smart\\s+breeze|heavy\\s+breeze|very\\s+fresh\\s+breeze|fresh\\s+blow\\s+good\\s+breeze|whole\\s+sail\\s+breeze|peak\\s+breeze|fresh\\s+trade\\s+wind(s)?|light\\s+air|very\\s+light\\s+air(\\s+of\\s+wind)?|dead\\s+calm|perfectly\\s+calm|becalm(ed|ing)?|no\\s+wind|not\\s+wind\\s+enough|die(d|s)?\\s+out|clear(ed)?\\s+up|clear(ed)?\\s+of\\s+wind|wind\\s+out|haze(d)?\\s+up|wind\\s+increas(e|ing)|increas(ing|ed)?|breeze(d)?\\s+up|breez(ing|ed)?|haul(ed|ing)?(\\s+down|\\s+little|\\s+out)?|blow(ing)?\\s+hard|blow(ing)?\\s+a\\s+gale|blew\\s+very\\s+heavy|fearful(ly)?|blowed\\s+fearful(ly)?|high|scant|hair|fesh|sair|bills\\s+of\\s+laden\\s+wind|fresh\\s+breeze,\\s+rough|heavy\\s+blow,\\s+rough|squall,\\s+moderate|very\\s+moderate,\\s+calm|baffling\\s+wind|baffling\\s+and\\s+moderate)\\b"
+
 
 
 ## Patterns to find ----
@@ -405,24 +586,25 @@ journal_data <- journals |>
             str_detect(journal_entry, str_c(wind_patterns$WSW, collapse = "|")) ~ "WSW",
             # str_detect(journal_entry, direction_word_regex) ~ "WARD",
 
-            TRUE ~ "No wind"
+            TRUE ~ NA
         )
     ) |>
       mutate(
-        wind_mentioned = if_else(str_detect(journal_entry, "(?i)\\bwind\\b"), "Yes", "No")
+        wind_mentioned = if_else(str_detect(journal_entry, "(?i)\\bwind\\b"), "Yes", NA)
     )  |>
  
-   mutate(
-    wind_direction = case_when(
-        wind_direction == "WARD" & str_detect(journal_entry, "(?i)south") ~ "S",
-        wind_direction == "WARD" & str_detect(journal_entry, "(?i)east")  ~ "E",
-        wind_direction == "WARD" & str_detect(journal_entry, "(?i)north") ~ "N",
-        wind_direction == "WARD" & str_detect(journal_entry, "(?i)west")  ~ "W",
-        TRUE ~ wind_direction
-    )
-) |>
+#   mutate(
+#    wind_direction = case_when(
+#        wind_direction == "WARD" & str_detect(journal_entry, "(?i)south") ~ "S",
+#        wind_direction == "WARD" & str_detect(journal_entry, "(?i)east")  ~ "E",
+#        wind_direction == "WARD" & str_detect(journal_entry, "(?i)north") ~ "N",
+#        wind_direction == "WARD" & str_detect(journal_entry, "(?i)west")  ~ "W",
+#        TRUE ~ wind_direction
+#    )
+#) |>
 
-  mutate(wind_speed_description = map_chr(str_extract_all(journal_entry, wind_speed_patterns), ~ str_c(.x, collapse=" "))) |>
+  mutate(wind_speed_description = map_chr(str_extract_all(journal_entry, wind_speed_patterns), ~ str_c(.x, collapse=" ")),
+         wind_speed_description2 = map_chr(str_extract_all(journal_entry, wind_speed_patterns_stem_variants), ~ str_c(.x, collapse=" "))) |>
   mutate(wind_meteor = case_when(wind_direction == "N" ~ 0,
                                   wind_direction == "NNE" ~ 22.5,
                                   wind_direction == "NE" ~ 45,
@@ -438,9 +620,21 @@ journal_data <- journals |>
                                   wind_direction == "W" ~ 270,
                                   wind_direction == "WNW" ~ 292.5,
                                   wind_direction == "NW" ~ 315,
-                                  wind_direction == "NNW" ~ 337.5)) 
+                                  wind_direction == "NNW" ~ 337.5,
+                                 TRUE ~ NA)) 
   
 
+journal_data |>
+  select(date_mdy, wind_direction, wind_mentioned, wind_speed_description, wind_speed_description2) |>
+vis_miss()
+
+
+missed_wind <- journal_data |>
+  filter(is.na(wind_direction), !is.na(wind_mentioned)) |>
+  select(journal_entry, wind_mentioned)
+
+
+write_csv(missed_wind, file = "data/missed_wind_feb_4.csv")
 ```
 
 ## Location check
@@ -489,7 +683,7 @@ visdat::vis_miss(journal_wind)
 
 ```{r}
 
-journal_wind %>% 
+journal_wind |> 
   count(wind_direction)
 
 # Which are missing a wind direction. Is any wind detected?
@@ -536,22 +730,22 @@ wind_speed_patterns <- read_excel("/Users/francesleduke/Downloads/freelandbunker
 
 # if there are multiple rows for the same date_mdy where all wind_related columns are identical, remove them 
 
-journal_wind_unique <- journal_wind %>%
+journal_wind_unique <- journal_wind |>
   distinct(date_mdy, wind_direction, wind_meteor, wind_speed_description, .keep_all = TRUE)
 
 # delete duplicate NAs - keep missing wind/data in order to visualize it, but don't keep duplicate datapoints 
 
-journal_wind_unique <- journal_wind_unique %>%
-  group_by(date_mdy) %>%
-  filter(!(is.na(wind_direction) & is.na(wind_meteor) & is.na(wind_speed_description) & row_number() > 1)) %>%
+journal_wind_unique <- journal_wind_unique |>
+  group_by(date_mdy) |>
+  filter(!(is.na(wind_direction) & is.na(wind_meteor) & is.na(wind_speed_description) & row_number() > 1)) |>
   ungroup()
 
 # ensure no more duplicate NAs remain per day 
 # this sound return 0 rows 
 
-journal_wind_unique_duplicates <- journal_wind_unique %>%
-     group_by(date_mdy, wind_direction, wind_meteor, wind_speed_description) %>%
-     filter(n() > 1) %>%
+journal_wind_unique_duplicates <- journal_wind_unique |>
+     group_by(date_mdy, wind_direction, wind_meteor, wind_speed_description) |>
+     filter(n() > 1) |>
      arrange(date_mdy)
 
 
@@ -562,10 +756,10 @@ journal_wind_unique_duplicates <- journal_wind_unique %>%
 ```{r}
 # fix dates 
 
-journal_wind_unique <- journal_wind_unique %>%
+journal_wind_unique <- journal_wind_unique |>
   mutate(date = as.Date(date_mdy))
 
-journal_wind_unique <- journal_wind_unique %>%
+journal_wind_unique <- journal_wind_unique |>
   filter(
     date >= as.Date("1870-01-01") &
     date <= as.Date("1887-12-31")
@@ -576,19 +770,19 @@ journal_wind_unique <- journal_wind_unique %>%
 
 ```{r}
 
-journal_wind_unique <- journal_wind_unique %>%
+journal_wind_unique <- journal_wind_unique |>
   mutate(
     word_count = str_count(journal_entry, "\\S+")
   )
 
 
-journal_wind_unique <- journal_wind_unique %>%
+journal_wind_unique <- journal_wind_unique |>
   mutate(
     year  = year(date),
     word_count = str_count(journal_entry, "\\S+")
   )
 
-journal_wind_unique <- journal_wind_unique %>%
+journal_wind_unique <- journal_wind_unique |>
   mutate(
     month = factor(month, levels = month.name)
   )
@@ -598,8 +792,8 @@ journal_wind_unique <- journal_wind_unique %>%
 
 ```{r}
 
-monthly_words <- journal_wind_unique %>%
-  group_by(year, month) %>%
+monthly_words <- journal_wind_unique |>
+  group_by(year, month) |>
   summarise(
     total_words = sum(word_count, na.rm = TRUE),
     .groups = "drop"
@@ -628,9 +822,9 @@ ggsave(filename = "howoften.jpg", width = 10, height = 5)
 ```{r}
 # Days with multiple wind observations
 
-journal_wind_unique %>%
-  count(date_mdy) %>%
-  filter(n > 1) %>%
+journal_wind_unique |>
+  count(date_mdy) |>
+  filter(n > 1) |>
   arrange(desc(n))
 ```
 
@@ -863,7 +1057,7 @@ ggplot(freq_df, aes(x = wind_direction, y = beaufort, fill = Freq)) +
 
 ```{r}
 
-journal_wind_df <- journal_wind_df %>%
+journal_wind_df <- journal_wind_df |>
   mutate(
     season = case_when(
       month_numeric %in% c(12, 1, 2) ~ "Winter",
@@ -880,10 +1074,10 @@ journal_wind_df <- journal_wind_df %>%
 # How often does wind come from each direction? 
 ```{r}
 
-journal_wind_df %>%
-  filter(!is.na(wind_direction)) %>%   # drop NA rows
-  count(wind_direction) %>%
-  mutate(prop = n / sum(n)) %>%
+journal_wind_df |>
+  filter(!is.na(wind_direction)) |>   # drop NA rows
+  count(wind_direction) |>
+  mutate(prop = n / sum(n)) |>
   ggplot(aes(x = wind_direction, y = prop)) +
   geom_col(width = 0.75) +
   geom_text(aes(label = n), vjust = -0.3, size = 3) +
@@ -907,10 +1101,10 @@ journal_wind_df %>%
 ```
 
 ```{r}
-journal_wind_df %>%
-  filter(!is.na(wind_direction)) %>%   # drop NA rows
-  count(wind_direction) %>%
-  mutate(prop = n / sum(n)) %>%
+journal_wind_df |>
+  filter(!is.na(wind_direction)) |>   # drop NA rows
+  count(wind_direction) |>
+  mutate(prop = n / sum(n)) |>
   ggplot(aes(x = reorder(wind_direction, n), y = prop)) +
   geom_col(width = 0.75) +
   geom_text(aes(label = scales::percent(prop, accuracy = 0.01)), vjust = -0.1, hjust = -0.2,  size = 3) +
@@ -934,9 +1128,9 @@ journal_wind_df %>%
 
 ```{r}
 
-journal_wind_df %>%
-  filter(!is.na(wind_direction)) %>%   # drop NA rows
-  count(wind_direction) %>%
+journal_wind_df |>
+  filter(!is.na(wind_direction)) |>   # drop NA rows
+  count(wind_direction) |>
   ggplot(aes(x = wind_direction, y = n)) +
   geom_col(width = 0.75) +
   geom_text(aes(label = n), vjust = -0.3, size = 3) +
@@ -962,9 +1156,9 @@ journal_wind_df %>%
 
 
 ```{r}
-journal_wind_df %>%
-  filter(!is.na(wind_direction)) %>%
-  count(wind_direction) %>%
+journal_wind_df |>
+  filter(!is.na(wind_direction)) |>
+  count(wind_direction) |>
   ggplot(aes(x = wind_direction, y = n)) +
   geom_col(width = 0.75) +
   geom_text(aes(label = n), vjust = -0.3, size = 3) +
@@ -989,9 +1183,9 @@ journal_wind_df %>%
 ```
 
 ```{r}
-journal_wind_df %>%
-  filter(!is.na(wind_direction)) %>%
-  count(wind_direction) %>%
+journal_wind_df |>
+  filter(!is.na(wind_direction)) |>
+  count(wind_direction) |>
   ggplot(aes(x = reorder(wind_direction, n), y = n)) +
   geom_col(width = 0.75) +
   geom_text(aes(label = n), hjust = -0.1, size = 3) +
@@ -1013,9 +1207,9 @@ journal_wind_df %>%
 
 ```
 ```{r}
-journal_wind_df %>%
-  filter(!is.na(wind_direction)) %>%
-  count(wind_direction) %>%
+journal_wind_df |>
+  filter(!is.na(wind_direction)) |>
+  count(wind_direction) |>
   ggplot(aes(x = reorder(wind_direction, -n), y = n)) +
   geom_col(width = 0.75) +
   geom_text(aes(label = n), vjust = -0.3, size = 3) +
@@ -1037,10 +1231,10 @@ journal_wind_df %>%
 ```
 
 ```{r}
-journal_wind_df %>%
-  filter(!is.na(wind_direction)) %>%
-  count(wind_direction) %>%
-  mutate(prop = n / sum(n)) %>%
+journal_wind_df |>
+  filter(!is.na(wind_direction)) |>
+  count(wind_direction) |>
+  mutate(prop = n / sum(n)) |>
   ggplot(aes(x = wind_direction, y = prop)) +
   geom_col(width = 0.75) +
   geom_text(aes(label = scales::percent(prop, accuracy = 0.1)),
@@ -1079,10 +1273,10 @@ scale_fill_scico(palette = "lajolla", direction = 1)
 ```
 
 ```{r}
-journal_wind_df %>%
-  filter(!is.na(wind_direction), !is.na(beaufort)) %>%
-  mutate(beaufort = factor(beaufort, ordered = TRUE)) %>%
-  count(wind_direction, beaufort) %>%
+journal_wind_df |>
+  filter(!is.na(wind_direction), !is.na(beaufort)) |>
+  mutate(beaufort = factor(beaufort, ordered = TRUE)) |>
+  count(wind_direction, beaufort) |>
   ggplot(aes(x = wind_direction, y = n, fill = beaufort)) +
   geom_col(width = 0.75, color = "grey30") +
   scale_x_discrete(limits = c("N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW", "No wind")) +
@@ -1109,12 +1303,12 @@ journal_wind_df %>%
 
 
 ```{r}
-journal_wind_df %>%
-  filter(!is.na(wind_direction), !is.na(beaufort)) %>%
-  mutate(beaufort = factor(beaufort, ordered = TRUE)) %>%
-  count(wind_direction, beaufort) %>%
-  group_by(wind_direction) %>%
-  mutate(prop = n / sum(n)) %>%
+journal_wind_df |>
+  filter(!is.na(wind_direction), !is.na(beaufort)) |>
+  mutate(beaufort = factor(beaufort, ordered = TRUE)) |>
+  count(wind_direction, beaufort) |>
+  group_by(wind_direction) |>
+  mutate(prop = n / sum(n)) |>
   ggplot(aes(x = wind_direction, y = prop, fill = beaufort)) +
   geom_col(width = 0.75, color = "grey30") +
   scale_x_discrete(limits = c("N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW", "No wind")) +
@@ -1138,10 +1332,10 @@ journal_wind_df %>%
 
 ```
 ```{r}
-journal_wind_df %>%
-  filter(!is.na(wind_direction), !is.na(beaufort)) %>%
-  mutate(beaufort = factor(beaufort, ordered = TRUE)) %>%
-  count(wind_direction, beaufort) %>%
+journal_wind_df |>
+  filter(!is.na(wind_direction), !is.na(beaufort)) |>
+  mutate(beaufort = factor(beaufort, ordered = TRUE)) |>
+  count(wind_direction, beaufort) |>
   ggplot(aes(x = wind_direction, y = n, fill = beaufort)) +
   geom_col(width = 0.75, color = "grey30") +
   facet_wrap(~ wind_direction, scales = "free_y", ncol = 4) +
@@ -1165,20 +1359,20 @@ journal_wind_df %>%
 ```
 ```{r}
 
-journal_wind_df %>%
-  filter(!is.na(wind_direction), !is.na(beaufort)) %>%
-  mutate(beaufort = factor(beaufort, ordered = TRUE)) %>%
-  count(wind_direction, beaufort) %>%
-  group_by(wind_direction) %>%
+journal_wind_df |>
+  filter(!is.na(wind_direction), !is.na(beaufort)) |>
+  mutate(beaufort = factor(beaufort, ordered = TRUE)) |>
+  count(wind_direction, beaufort) |>
+  group_by(wind_direction) |>
   mutate(
     prop = n / sum(n),
     total = sum(n)
-  ) %>%
-  ungroup() %>%
+  ) |>
+  ungroup() |>
   ggplot(aes(x = wind_direction, y = prop, fill = beaufort)) +
   geom_col(width = 0.75, color = "grey30") +
   geom_text(
-    data = . %>% distinct(wind_direction, total),
+    data = . |> distinct(wind_direction, total),
     aes(x = wind_direction, y = 1.02, label = total),
     inherit.aes = FALSE,   # IMPORTANT
     size = 3,
@@ -1216,27 +1410,27 @@ directions <- c(
   "N","W","S","E"
 )
 
-journal_wind_df %>%
+journal_wind_df |>
   filter(
     wind_direction %in% directions,
     !is.na(beaufort),
     !is.na(season)
-  ) %>%
-  mutate(beaufort = factor(beaufort, ordered = TRUE)) %>%
-  count(season, wind_direction, beaufort) %>%
-  group_by(season, wind_direction) %>%
+  ) |>
+  mutate(beaufort = factor(beaufort, ordered = TRUE)) |>
+  count(season, wind_direction, beaufort) |>
+  group_by(season, wind_direction) |>
   mutate(
     prop  = n / sum(n),
     total = sum(n)
-  ) %>%
-  filter(total > 30) %>% 
-  ungroup() %>%
+  ) |>
+  filter(total > 30) |> 
+  ungroup() |>
   ggplot(aes(x = wind_direction, y = total, fill = beaufort)) +
 
   geom_col(width = 1, color = "grey30") +
 
   # # geom_text(
-  #   data = . %>% distinct(season, wind_direction, total),
+  #   data = . |> distinct(season, wind_direction, total),
   #   aes(x = wind_direction, y = 1.08, label = total),
   #   inherit.aes = FALSE,
   #   size = 2.8,
@@ -1274,27 +1468,27 @@ ggsave(filename = "beaufort_rose_season.jpg", width = 10, height = 12)
 
 ```
 ```{r}
-journal_wind_df %>%
+journal_wind_df |>
   filter(
     !is.na(wind_direction),
     !is.na(beaufort),
     !is.na(season),
     wind_direction !="No wind",
-  ) %>%
-  mutate(beaufort = factor(beaufort, ordered = TRUE)) %>%
-  count(season, wind_direction, beaufort) %>%
-  group_by(season, wind_direction) %>%
+  ) |>
+  mutate(beaufort = factor(beaufort, ordered = TRUE)) |>
+  count(season, wind_direction, beaufort) |>
+  group_by(season, wind_direction) |>
   mutate(
     prop  = n / sum(n),
     total = sum(n)
-  ) %>%
-  ungroup() %>%
+  ) |>
+  ungroup() |>
   ggplot(aes(x = wind_direction, y = prop, fill = beaufort)) +
 
   geom_col(width = 0.75, color = "grey30") +
 
   geom_text(
-    data = . %>% distinct(season, wind_direction, total),
+    data = . |> distinct(season, wind_direction, total),
     aes(x = wind_direction, y = 1.05, label = total),
     inherit.aes = FALSE,
     size = 3.1,
@@ -1341,19 +1535,19 @@ directions <- c(
   "N","NNW","NW","WNW","W","WSW","SW","SSW","S","SSE","SE","ESE","E","ENE","NE","NNE"
 )
 
-journal_wind_df %>%
+journal_wind_df |>
   filter(
     wind_direction %in% directions,   # replaces != "No wind"
     !is.na(beaufort)
-  ) %>%
-  mutate(beaufort = factor(beaufort, ordered = TRUE)) %>%
-  count(wind_direction, beaufort) %>%
-  group_by(wind_direction) %>%
+  ) |>
+  mutate(beaufort = factor(beaufort, ordered = TRUE)) |>
+  count(wind_direction, beaufort) |>
+  group_by(wind_direction) |>
   mutate(
     prop  = n / sum(n),
     total = sum(n)
-  ) %>%
-  ungroup() %>%
+  ) |>
+  ungroup() |>
   ggplot(aes(x = wind_direction, y = prop, fill = beaufort)) +
 
   # stacked proportional bars → wind rose wedges
@@ -1365,7 +1559,7 @@ journal_wind_df %>%
 
   # total sample size annotation per direction
   geom_text(
-    data = . %>% distinct(wind_direction, total),
+    data = . |> distinct(wind_direction, total),
     aes(
       x = wind_direction,
       y = 1.08,
@@ -1431,14 +1625,14 @@ scale_fill_scico(palette = "lajolla", direction = 1)
 
 
 ```{r}
-journal_wind_df %>%
+journal_wind_df |>
   mutate(
     wind_direction = factor(
       wind_direction,
       levels = c("N", "NE", "E", "SE", "S", "SW", "W", "NW")
     )
-  ) %>%
-  count(wind_direction) %>%
+  ) |>
+  count(wind_direction) |>
   ggplot(aes(x = wind_direction, y = n)) +
   geom_col(width = 0.75) +
   geom_text(aes(label = n), vjust = -0.3, size = 3) +
@@ -1463,8 +1657,8 @@ journal_wind_df %>%
 # How strong is the wind when it comes from each direction?
 ```{r}
 
-journal_wind_df %>%
-  count(wind_direction, beaufort) %>%
+journal_wind_df |>
+  count(wind_direction, beaufort) |>
   ggplot(aes(x = wind_direction, y = beaufort, fill = n)) +
   geom_tile() +
   labs(
@@ -1493,15 +1687,15 @@ ggplot(journal_wind_df, aes(x = month_numeric, y = as.numeric(beaufort))) +
 library(ggplot2)
 library(scales)
 
-journal_wind_df %>%
-  filter(!is.na(beaufort), !is.na(month_numeric)) %>%
+journal_wind_df |>
+  filter(!is.na(beaufort), !is.na(month_numeric)) |>
   mutate(
     month = factor(
       month_numeric,
       levels = 1:12,
       labels = month.abb
     )
-  ) %>%
+  ) |>
   ggplot(aes(x = month, y = as.numeric(beaufort))) +
 
   # distribution
@@ -1557,7 +1751,7 @@ journal_wind_df %>%
 
 ```{r}
 
-journal_wind_df <- journal_wind_df %>%
+journal_wind_df <- journal_wind_df |>
   dplyr::filter(
     date_mdy >= as.POSIXct("1871-01-01 00:00:00", tz = "UTC") &
     date_mdy <= as.POSIXct("1886-12-31 23:59:59", tz = "UTC")
@@ -1593,16 +1787,16 @@ ggplot(journal_wind_df, aes(x = date_mdy, y = as.numeric(beaufort))) +
 ```
 
 ```{r}
-journal_wind_df %>%
-  mutate(year_month = floor_date(date_mdy, "month")) %>%
+journal_wind_df |>
+  mutate(year_month = floor_date(date_mdy, "month")) |>
   filter(date_mdy >= as.Date("1876-01-01") &
-         date_mdy <= as.Date("1876-12-31")) %>%
-  group_by(year_month) %>%
+         date_mdy <= as.Date("1876-12-31")) |>
+  group_by(year_month) |>
   summarise(
     mean_beaufort = mean(as.numeric(beaufort), na.rm = TRUE),
     sd_beaufort   = sd(as.numeric(beaufort), na.rm = TRUE),
     n = n()
-  ) %>%
+  ) |>
   ggplot(aes(x = year_month, y = mean_beaufort)) +
   geom_line() +
   geom_ribbon(
@@ -1623,7 +1817,7 @@ journal_wind_df %>%
 
 ```
 ```{r}
-journal_wind_df %>%
+journal_wind_df |>
   mutate(
     date_mdy = as.Date(date_mdy),   # <-- convert POSIX to Date
     year_month = floor_date(date_mdy, "month"),
@@ -1634,13 +1828,13 @@ journal_wind_df %>%
       month %in% c("Jun", "Jul", "Aug") ~ "Summer",
       TRUE ~ "Fall"
     )
-  ) %>%
-  group_by(year_month, season) %>%
+  ) |>
+  group_by(year_month, season) |>
   summarise(
     mean_beaufort = mean(as.numeric(beaufort), na.rm = TRUE),
     sd_beaufort   = sd(as.numeric(beaufort), na.rm = TRUE),
     .groups = "drop"
-  ) %>%
+  ) |>
   ggplot(aes(x = year_month, y = mean_beaufort)) +
   geom_line(color = "black") +
   geom_ribbon(
@@ -1669,11 +1863,11 @@ ggsave(filename = "beaufort_time_series.jpg", width = 20, height = 6)
 
 
 ```{r}
-journal_wind_df %>%
+journal_wind_df |>
   filter(
     !is.na(wind_direction),
     tolower(wind_direction) != "no wind"
-  ) %>%
+  ) |>
   mutate(
     date_mdy = as.Date(date_mdy),
     year_month = floor_date(date_mdy, "month"),
@@ -1684,12 +1878,12 @@ journal_wind_df %>%
       month %in% c("Jun", "Jul", "Aug") ~ "Summer",
       TRUE ~ "Fall"
     )
-  ) %>%
-  group_by(year_month, season) %>%
+  ) |>
+  group_by(year_month, season) |>
   summarise(
     n_reports = n(),
     .groups = "drop"
-  ) %>%
+  ) |>
   ggplot(aes(x = year_month, y = n_reports)) +
   geom_line(color = "black") +
   scale_x_date(date_labels = "%b %Y", date_breaks = "3 months") +
@@ -1708,11 +1902,11 @@ journal_wind_df %>%
 ggsave(filename = "direction_time_series.jpg", width = 20, height = 6)
 ```
 ```{r}
-journal_wind_df %>%
+journal_wind_df |>
   filter(
     !is.na(wind_speed_description),
     wind_speed_description != ""
-  ) %>%
+  ) |>
   mutate(
     date_mdy = as.Date(date_mdy),
     year_month = floor_date(date_mdy, "month"),
@@ -1723,12 +1917,12 @@ journal_wind_df %>%
       month %in% c("Jun", "Jul", "Aug") ~ "Summer",
       TRUE ~ "Fall"
     )
-  ) %>%
-  group_by(year_month, season) %>%
+  ) |>
+  group_by(year_month, season) |>
   summarise(
     n_reports = n(),
     .groups = "drop"
-  ) %>%
+  ) |>
   ggplot(aes(x = year_month, y = n_reports)) +
   geom_line(color = "black") +
   scale_x_date(date_labels = "%b %Y", date_breaks = "3 months") +
@@ -1806,15 +2000,15 @@ ggsave(filename = "beaufortbox.jpg", width = 15, height = 6)
 ```{r}
 directions <- c("N", "W", "S", "E")
 
-wind_common <- journal_wind_df %>%
+wind_common <- journal_wind_df |>
   filter(
     wind_direction %in% directions,
     !is.na(beaufort),
     !is.na(season)
-  ) %>%
-  group_by(season, wind_direction) %>%
-  mutate(total = n()) %>%
-  filter(total > 30) %>%   # SAME threshold as rose
+  ) |>
+  group_by(season, wind_direction) |>
+  mutate(total = n()) |>
+  filter(total > 30) |>   # SAME threshold as rose
   ungroup()
 
 ```
@@ -1974,7 +2168,7 @@ sum(beaufort_grouped$frequency[1:65])
 
 ```{r}
 
-wind_description_multiple <- journal_wind_df %>%
+wind_description_multiple <- journal_wind_df |>
   filter(!is.na(journal_wind_df$wind_speed_description),
          wind_speed_description != "",
          str_detect(wind_speed_description, "\\s"))
@@ -1986,12 +2180,12 @@ wind_description_multiple <- journal_wind_df %>%
 
 ```{r}
 
-yes_wind_mentioned <- journal_wind_df %>%
+yes_wind_mentioned <- journal_wind_df |>
   filter(wind_mentioned == c("Yes"))
 
 # Show only entries with "hauled"
 
-hauled_yes_wind_mentioned <- journal_wind_df %>%
+hauled_yes_wind_mentioned <- journal_wind_df |>
   filter(
     wind_mentioned == "Yes",
     str_detect(journal_entry, regex("hauled", ignore_case = TRUE))
@@ -1999,10 +2193,10 @@ hauled_yes_wind_mentioned <- journal_wind_df %>%
 
 # Show me rows with direction and speed 
 
-hauled_wind_yes_direction <- hauled_yes_wind_mentioned  %>%
+hauled_wind_yes_direction <- hauled_yes_wind_mentioned  |>
   filter(wind_direction != "No Wind", ignore_case = TRUE)
 
-hauled_wind_yes_direction <- hauled_wind_yes_direction  %>%
+hauled_wind_yes_direction <- hauled_wind_yes_direction  |>
   filter(wind_direction != "No wind", ignore_case = TRUE)
 
 # Write this dataframe to excel - will use generative AI to determine where he's talking about wood and where he's talking about wind 
@@ -2011,7 +2205,7 @@ write_xlsx(hauled_wind_yes_direction, "hauled_wind_yes_direction.xlsx")
 
 # Find where he's explicitly saying "wind hauled"
 
-wind_hauling <- journal_wind_df %>%
+wind_hauling <- journal_wind_df |>
   filter(grepl("wind hauled", journal_entry, ignore.case = TRUE))
 
 # # View them
@@ -2029,13 +2223,13 @@ hauled_wind_yes_direction$journal_entry[c(1, 2, 3, 4, 5,6,7,8,9,10)]
 
 # Where are we getting beaufort and where are we not?
 ```{r}
-beaufort_df <- journal_wind_df %>%
+beaufort_df <- journal_wind_df |>
   filter(!is.na(beaufort))
 
-no_beaufort_df <- journal_wind_df %>%
+no_beaufort_df <- journal_wind_df |>
   filter(is.na(beaufort))
 
-df_direction_words <- journal_wind_df %>%
+df_direction_words <- journal_wind_df |>
   filter(str_detect(journal_entry, "\\b(north|south|east|west)(?:ward)\\b"))
 
 
@@ -2072,7 +2266,7 @@ windRose(
 
 ```{r}
 
-freq <- missing_speed %>%
+freq <- missing_speed |>
   count(month, wind_direction)
 
 ggplot(freq, aes(wind_direction, month, fill = n)) +
@@ -2093,15 +2287,15 @@ directions <- c(
   "N","W","S","E"
 )
 
-freq <- missing_speed %>%
+freq <- missing_speed |>
   mutate(month = factor(month, levels = month_levels),
          wind_direction = factor(wind_direction, levels = directions),
-         season = season) %>%
+         season = season) |>
    filter(
     !is.na(wind_direction),
-  ) %>%
-  count(month, wind_direction, season) %>%
-  complete(month, wind_direction, fill = list(n = 0)) %>%
+  ) |>
+  count(month, wind_direction, season) |>
+  complete(month, wind_direction, fill = list(n = 0)) |>
   mutate(n_fill = ifelse(n == 0, NA, n))
 
          
@@ -2136,7 +2330,7 @@ ggplot(freq, aes(wind_direction, month, fill = n_fill)) +
 ggsave(filename = "missing_wind_season.jpg", width = 10, height = 12)
 ```
 ```{r}
-freq2 <- freq %>%
+freq2 <- freq |>
   mutate(
     month_num = as.integer(month)
   )
@@ -2202,8 +2396,8 @@ ggplot(freq, aes(
 
 ```
 ```{r}
-dir_totals <- freq %>%
-  group_by(wind_direction) %>%
+dir_totals <- freq |>
+  group_by(wind_direction) |>
   summarise(total = sum(n), .groups = "drop")
 
 ```
@@ -2221,11 +2415,11 @@ directions <- c(
   "N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"
 )
 
-freq <- missing_speed %>%
+freq <- missing_speed |>
   mutate(month = factor(month, levels = month_levels),
-         wind_direction = factor(wind_direction, levels = directions)) %>%
-  count(month, wind_direction) %>%
-  complete(month, wind_direction, fill = list(n = 0)) %>%
+         wind_direction = factor(wind_direction, levels = directions)) |>
+  count(month, wind_direction) |>
+  complete(month, wind_direction, fill = list(n = 0)) |>
   mutate(n_fill = ifelse(n == 0, NA, n))
 
          
@@ -2262,12 +2456,12 @@ directions <- c(
   "N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"
 )
 
-freq_wind_present <- present_speed %>%
+freq_wind_present <- present_speed |>
   mutate(month = factor(month, levels = month_levels),
-         wind_direction = factor(wind_direction, levels = directions)) %>%
-  count(month, wind_direction) %>%
-  complete(month, wind_direction, fill = list(n = 0)) %>%
-  mutate(n_fill = ifelse(n == 0, NA, n))  %>%
+         wind_direction = factor(wind_direction, levels = directions)) |>
+  count(month, wind_direction) |>
+  complete(month, wind_direction, fill = list(n = 0)) |>
+  mutate(n_fill = ifelse(n == 0, NA, n))  |>
   filter(!is.na(wind_direction))
 
          
@@ -2290,7 +2484,7 @@ ggplot(freq_wind_present, aes(wind_direction, month, fill = n_fill)) +
 ```
 #for later
 ```{r}
-unique_df_cols <- df_cols %>%
+unique_df_cols <- df_cols |>
   distinct(id,.keep_all = TRUE)
 ```
 
@@ -2304,7 +2498,7 @@ journals_duplicates2 <- journals2 [
   duplicated(journals2$date_mdy) | duplicated(journals2$date_mdy, fromLast = TRUE),
 ]
 
-journals_duplicates2 <- journals_duplicates2 %>%
+journals_duplicates2 <- journals_duplicates2 |>
   arrange(date_mdy)
 
 
@@ -2319,7 +2513,7 @@ journals_wind_reference_duplicates <- journals_wind_reference [
   duplicated(journals_wind_reference$date_mdy) | duplicated(journals_wind_reference$date_mdy, fromLast = TRUE),
 ]
 
-journals_wind_reference_duplicates <- journals_wind_reference_duplicates %>%
+journals_wind_reference_duplicates <- journals_wind_reference_duplicates |>
   arrange(date_mdy)
 ```
 
@@ -2332,7 +2526,7 @@ journal_data_duplicates <- journal_data [
   duplicated(journal_data$date_mdy) | duplicated(journal_data$date_mdy, fromLast = TRUE),
 ]
 
-journal_data_duplicates <- journal_data_duplicates %>%
+journal_data_duplicates <- journal_data_duplicates |>
   arrange(date_mdy)
 ```
 
@@ -2344,7 +2538,7 @@ journal_long_loc_duplicates <- journal_long_loc [
   duplicated(journal_long_loc$date_mdy) | duplicated(journal_long_loc, fromLast = TRUE),
 ]
 
-journal_long_loc_duplicates <- journal_long_loc_duplicates %>%
+journal_long_loc_duplicates <- journal_long_loc_duplicates |>
   arrange(date_mdy)
 
 # seems here that duplicates are mostly in location 
@@ -2359,14 +2553,14 @@ journal_wind_duplicates <- journal_wind [
   duplicated(journal_wind$date_mdy) | duplicated(journal_wind, fromLast = TRUE),
 ]
 
-journal_wind_duplicates <- journal_wind_duplicates %>%
+journal_wind_duplicates <- journal_wind_duplicates |>
   arrange(date_mdy)
 
 ```
 
 
 ```{r}
-wind_rose <- missing_speed %>%
+wind_rose <- missing_speed |>
   count(wind_direction)
 
 ```
@@ -2410,7 +2604,7 @@ ggplot(missing_speed, aes(month, wind_direction, color = wind_direction)) +
 ```{r}
 
 
-upset_df <- journal_wind_df %>%
+upset_df <- journal_wind_df |>
   mutate(
     WindMentioned = wind_mentioned == "Yes",
     HasWindDescription = !is.na(wind_speed_description) &
@@ -2425,7 +2619,7 @@ upset_df <- journal_wind_df %>%
     Summer       = month_numeric %in% c(6, 7, 8),
     Fall          = month_numeric %in% c(9, 10, 11),
     year_numeric  = as.numeric(format(date_mdy, "%Y"))
-  ) %>%
+  ) |>
   # keep numeric columns for attribute plots
   select(
     HasWindDescription, HasDirection, WindMentioned, StrongWind, ModerateWind, CalmWind, WindOut, Winter, Spring, Summer, Fall, beaufort, wind_meteor, month_numeric, wind_speed_knots, year_numeric, vector_magnitude
@@ -2433,12 +2627,12 @@ upset_df <- journal_wind_df %>%
 
 # there are some outliers in the year data (translation mistakes) so filter these out or they will skew the axis 
 
-upset_df <- upset_df %>%
+upset_df <- upset_df |>
   filter(year_numeric >= 1500, year_numeric <= 1900)
 
 # make month column a factor so axis ticks are whole numbers 
 
-upset_df <- upset_df %>%
+upset_df <- upset_df |>
   mutate(
     month_numeric = factor(
       month_numeric,
@@ -2470,7 +2664,7 @@ upset_df <- as.data.frame(upset_df)
 # Remove NAs 
 
 ```{r}
-upset_df_clean <- upset_df %>%
+upset_df_clean <- upset_df |>
   filter(!is.na(beaufort),
          !is.na(wind_meteor),
          !is.na(month_numeric),
@@ -2493,7 +2687,7 @@ upset_df_clean <- as.data.frame(upset_df_clean)
 ```{r}
 sets <- c("HasWindDescription", "HasDirection", "WindMentioned", "StrongWind", "ModerateWind", "CalmWind", "WindOut",  "Winter", "Spring", "Summer", "Fall")
 
-upset_df_clean2 <- upset_df_clean %>%
+upset_df_clean2 <- upset_df_clean |>
   mutate(across(all_of(sets), ~ as.integer(.)))
 
 ```
@@ -2501,7 +2695,7 @@ upset_df_clean2 <- upset_df_clean %>%
 # Make sure sets are read first 
 
 ```{r}
-upset_df_clean2 <- upset_df_clean2 %>%
+upset_df_clean2 <- upset_df_clean2 |>
   select(all_of(sets), everything())
 
 ```
@@ -2556,7 +2750,7 @@ dev.off()
 
 ```{r}
 
-journal_upset_df <- journal_wind_df %>%
+journal_upset_df <- journal_wind_df |>
   mutate(
     # ---- Sets (logical only) ----
     WindMentioned = wind_mentioned == "Yes",
@@ -2789,7 +2983,7 @@ anim_save("wind_vectors_animation2.gif", animation = anim)
 
 ```
 ```{r}
-bounds <- test %>%
+bounds <- test |>
   summarise(
     xmin = min(longitude.y, na.rm = TRUE),
     xmax = max(longitude.y, na.rm = TRUE),
@@ -2849,12 +3043,12 @@ test <- journal_wind_df |>
                                 month < 10 ~ paste0(year, 0, month)))
          
 # # Shift positions incrementally to simulate wind movement 1/2
-# test <- journal_wind_df %>%
-#   group_by(frame) %>%
+# test <- journal_wind_df |>
+#   group_by(frame) |>
 #   mutate(
 #     long_shifted = long + (u_vector * (frame / num_frames)), # Incrementally shift longitude
 #     lat_shifted = lat + (v_vector * (frame / num_frames))    # Incrementally shift latitude
-#   ) %>%
+#   ) |>
 #   ungroup()
 # # this code works when this chunk is not here 2/2
 
@@ -3139,11 +3333,11 @@ library(lubridate)
 
 # use data from my data frame
 
-journal_wind_df %>%
-  mutate(date_mdy = lubridate::ymd(date_mdy)) %>%
-  mutate(date_year = lubridate::year(date_mdy)) %>%
-  filter(date_year == 1880) %>%
-  #filter(date_mdy >= as.Date("1880-01-01") & date_mdy <= as.Date("1880-12-31")) %>%
+journal_wind_df |>
+  mutate(date_mdy = lubridate::ymd(date_mdy)) |>
+  mutate(date_year = lubridate::year(date_mdy)) |>
+  filter(date_year == 1880) |>
+  #filter(date_mdy >= as.Date("1880-01-01") & date_mdy <= as.Date("1880-12-31")) |>
 ggplot(aes(x = date_mdy, y = wind_speed_knots)) + # x-axis = date, y-axis = wind speed (wind speed over time graph ! )
   geom_point(color = "blue", size = 0.5, alpha = 0.5) +  # creating a scatter plot
   geom_segment(aes(
@@ -3165,11 +3359,11 @@ library(gganimate)
 
 # use data from my data frame
 
-journal_wind_df %>%
-  mutate(date_mdy = lubridate::ymd(date_mdy)) %>%
-  mutate(date_year = lubridate::year(date_mdy)) %>%
-  # filter(date_year < 1950) %>%
-  # filter(date_mdy >= as.Date("1873-10-08") & date_mdy <= as.Date("1874-04-13")) %>% # using arbitrary dates to test a smaller subset of data
+journal_wind_df |>
+  mutate(date_mdy = lubridate::ymd(date_mdy)) |>
+  mutate(date_year = lubridate::year(date_mdy)) |>
+  # filter(date_year < 1950) |>
+  # filter(date_mdy >= as.Date("1873-10-08") & date_mdy <= as.Date("1874-04-13")) |> # using arbitrary dates to test a smaller subset of data
 ggplot(aes(x = date_mdy, y = wind_speed_knots)) + # x-axis = date, y-axis = wind speed (wind speed over time graph ! )
   geom_point(color = "blue", size = 0.5, alpha = 0.5) +  # creating a scatter plot
   geom_segment(aes(
@@ -3194,10 +3388,10 @@ library(lubridate)
 library(dplyr)
 
 
-journal_wind_df %>%
-  mutate(date_mdy = ymd(date_mdy)) %>%
-  mutate(date_year = year(date_mdy), date_month = month(date_mdy, label = TRUE)) %>%  # Extract year and month
-  filter(date_year == 1873) %>%  
+journal_wind_df |>
+  mutate(date_mdy = ymd(date_mdy)) |>
+  mutate(date_year = year(date_mdy), date_month = month(date_mdy, label = TRUE)) |>  # Extract year and month
+  filter(date_year == 1873) |>  
   ggplot(aes(x = date_mdy, y = 0)) +  
   geom_point(color = "blue", size = 0.5, alpha = 0.5) +  
   geom_segment(aes(
@@ -3209,14 +3403,14 @@ journal_wind_df %>%
   labs(title = "Wind Vectors Over Time (1873)", x = "Month", y = "Wind Speed (knots)") +
   theme_minimal()
 
-journal_wind_df %>%
+journal_wind_df |>
   ggplot(aes(x= u_vector, y = v_vector)) + geom_point()
-# journal_wind_df %>%
-#   mutate(date_mdy = ymd(date_mdy)) %>%
-#   mutate(date_year = year(date_mdy), date_month = month(date_mdy, label = TRUE)) %>%  # Extract year and month
-#   filter(date_year == 1873) %>%  
-#   mutate (date_xend = date_mdy + u_vector * 0.5) %>% 
-#   mutate (date_yend = v_vector * 0.3) %>% 
+# journal_wind_df |>
+#   mutate(date_mdy = ymd(date_mdy)) |>
+#   mutate(date_year = year(date_mdy), date_month = month(date_mdy, label = TRUE)) |>  # Extract year and month
+#   filter(date_year == 1873) |>  
+#   mutate (date_xend = date_mdy + u_vector * 0.5) |> 
+#   mutate (date_yend = v_vector * 0.3) |> 
 #   select(date_xend, date_yend, date_mdy)
 
 
@@ -3228,15 +3422,15 @@ See this tutorial for adding a label to the plot: https://stackoverflow.com/ques
 
 
 ```{r}
-journal_wind_df %>%
-  mutate(date_mdy = lubridate::ymd(date_mdy)) %>%
+journal_wind_df |>
+  mutate(date_mdy = lubridate::ymd(date_mdy)) |>
   mutate(date_year = lubridate::year(date_mdy),
-         date_month = lubridate::month(date_mdy)) %>%
-  drop_na(wind_speed_knots) %>%
-  filter(date_year < 1950) %>%
-  group_by(date_year, date_month, wind_speed_knots) %>%
-  summarize(num_wind_reported = n()) %>%
-  mutate(year_month = paste(date_year, date_month, "15", sep = "-"))# %>%
+         date_month = lubridate::month(date_mdy)) |>
+  drop_na(wind_speed_knots) |>
+  filter(date_year < 1950) |>
+  group_by(date_year, date_month, wind_speed_knots) |>
+  summarize(num_wind_reported = n()) |>
+  mutate(year_month = paste(date_year, date_month, "15", sep = "-"))# |>
  # ggplot(aes(x = lubridate::ymd(year_month), y = num_wind_reported, group = wind_speed_knots, color = wind_speed_knots)) +
  # geom_line() # +
   #facet_wrap(~wind_speed_knots)
@@ -3250,10 +3444,10 @@ library(lubridate)
 
 # use data from my data frame
 
-journal_wind_df %>%
-  mutate(date_mdy = lubridate::ymd(date_mdy)) %>%
-  mutate(date_year = lubridate::year(date_mdy)) %>%
-  filter(date_year == 1880) %>%
+journal_wind_df |>
+  mutate(date_mdy = lubridate::ymd(date_mdy)) |>
+  mutate(date_year = lubridate::year(date_mdy)) |>
+  filter(date_year == 1880) |>
 ggplot(aes(x = date_mdy, y = wind_speed_knots)) + # x-axis = date, y-axis = wind speed (wind speed over time graph ! )
   geom_point(color = "blue", size = 0.5, alpha = 0.5) +  # creating a scatter plot
   geom_segment(aes(
@@ -3276,10 +3470,10 @@ library(tidyverse)
 library(scales)
 
 
-journal_wind_df %>%
-  mutate(date_mdy = lubridate::ymd(date_mdy)) %>%
-  mutate(date_year = lubridate::year(date_mdy)) %>%
-  filter(date_year == 1880) %>%
+journal_wind_df |>
+  mutate(date_mdy = lubridate::ymd(date_mdy)) |>
+  mutate(date_year = lubridate::year(date_mdy)) |>
+  filter(date_year == 1880) |>
   ggplot(aes(x = longitude.y, y = latitude.y)) +
   geom_segment(aes(
     xend = longitude.y + u_vector * 0.025,
@@ -3323,11 +3517,11 @@ library(lubridate)
 
 # use data from my data frame
 
-journal_wind_df %>%
-  mutate(date_mdy = lubridate::ymd(date_mdy)) %>%
-  mutate(date_year = lubridate::year(date_mdy)) %>%
-  filter(date_year == 1880) %>%
-  #filter(date_mdy >= as.Date("1880-01-01") & date_mdy <= as.Date("1880-12-31")) %>%
+journal_wind_df |>
+  mutate(date_mdy = lubridate::ymd(date_mdy)) |>
+  mutate(date_year = lubridate::year(date_mdy)) |>
+  filter(date_year == 1880) |>
+  #filter(date_mdy >= as.Date("1880-01-01") & date_mdy <= as.Date("1880-12-31")) |>
 ggplot(aes(x = date_mdy, y = wind_speed_knots)) + # x-axis = date, y-axis = wind speed (wind speed over time graph ! )
   geom_point(color = "blue", size = 0.5, alpha = 0.5) +  # creating a scatter plot
   geom_segment(aes(
