@@ -553,15 +553,7 @@ journal_data$wind_dir_clean_2 <- vapply(
 journal_data |> filter(!is.na(wind_mentioned)) |> select(journal_entry, wind_clause, wind_dir_token, wind_dir_token_2, wind_mentioned, wind_dir_clean, wind_dir_clean_2)
 ```
 
-```{r wind-speed-patterns}
-
-# Wind speed patterns 
-
-wind_speed_patterns <- "(?i)\\b(strong|powerful|heavy|intense|light|gentle|soft|calm|still|moderate|steady|gusty|blustery|variable|baffling|fresh|squally|brisk|stormy|tempestuous|strong|powerful|heavy|intense|light|gentle|soft|calm|still|moderate|steady|gusty|blustery|variable|calm|pleasant|fine|clear|light|fresh breeze|scant|fine|clam|clear|light|cleared of wind|smooth|baffling wind|eased|light air|fesh|dead calm|died out|hair|no wind|becalmed|not wind enough|baffling|becalmed|cleared up|very light air of wind|light air|perfectly calm|hazed up|wind out|hauling little|baffling|fresh|squally|brisk|stormy|tempestuous|moderate|fresh breeze|strong breeze|smart breeze|fresh blow good breeze|very fresh breeze|moderating|blowy|blowing|variable|breezing|whole sail breeze|changeable|fresh trade winds|high|peak breeze|mederate|fine|perfect|hauled down|steady|fine|wind increasing|breezed up|increasing|wind out|baffling and moderate|blustering|heavy blow|heavy|strong|rough|windstorm |big storm |heavy breeze|gale|stronger|tremendous|squall|hard|blowing a gale|hauled|squalls|hauling|terrific storm |blowing hard|squalls|perfect gale|squall|high winds|blew very heavy|fearfuly|blowed fearfuly|hauling out|rain squalls|growing rough|very moderate, calm|fresh breeze, rough|heavy blow, rough|sair|mode|wind increasing|wind out|squall, moderate|bills of laden wind|hauling little)\\b"
-
-wind_speed_patterns_stem_variants <- "(?i)\\b(strong(er)?|power(ful)?|heav(y|ier)?|intens(e|ity)?|light|gentl(e|y)?|soft|calm|clam|still|moder(ate|ating)?|mederate|mode|steady|gust(y|ing)?|bluster(ed|ing|y)?|blow(y|ing)?|brisk|variabl(e|y)?|changeabl(e|y)?|baffl(e|ed|ing)?|fresh|pleasant|fine|clear|perfect|smooth|eas(e|ed|ing)?|squall(s|y|ing)?|rain\\s+squall(s|y)?|storm(y|ier)?|tempest(uous|uousness)?|windstorm(s)?|big\\s+storm(s)?|terrific\\s+storm(s)?|tremendous|gale(s)?|perfect\\s+gale(s)?|high\\s+wind(s)?|hard|rough|grow(ing)?\\s+rough|fresh\\s+breeze|strong\\s+breeze|smart\\s+breeze|heavy\\s+breeze|very\\s+fresh\\s+breeze|fresh\\s+blow\\s+good\\s+breeze|whole\\s+sail\\s+breeze|peak\\s+breeze|fresh\\s+trade\\s+wind(s)?|light\\s+air|very\\s+light\\s+air(\\s+of\\s+wind)?|dead\\s+calm|perfectly\\s+calm|becalm(ed|ing)?|no\\s+wind|not\\s+wind\\s+enough|die(d|s)?\\s+out|clear(ed)?\\s+up|clear(ed)?\\s+of\\s+wind|wind\\s+out|haze(d)?\\s+up|wind\\s+increas(e|ing)|increas(ing|ed)?|breeze(d)?\\s+up|breez(ing|ed)?|haul(ed|ing)?(\\s+down|\\s+little|\\s+out)?|blow(ing)?\\s+hard|blow(ing)?\\s+a\\s+gale|blew\\s+very\\s+heavy|fearful(ly)?|blowed\\s+fearful(ly)?|high|scant|hair|fesh|sair|bills\\s+of\\s+laden\\s+wind|fresh\\s+breeze,\\s+rough|heavy\\s+blow,\\s+rough|squall,\\s+moderate|very\\s+moderate,\\s+calm|baffling\\s+wind|baffling\\s+and\\s+moderate)\\b"
-
-
+```{r original wind direction patterns, eval = FALSE}
 
 ## Patterns to find ----
 
@@ -637,15 +629,46 @@ missed_wind <- journal_data |>
 write_csv(missed_wind, file = "data/missed_wind_feb_4.csv")
 ```
 
+
+```{r wind-speed-patterns}
+# Wind speed patterns 
+
+wind_speed_patterns <- "(?i)\\b(strong|powerful|heavy|intense|light|gentle|soft|calm|still|moderate|steady|gusty|blustery|variable|baffling|fresh|squally|brisk|stormy|tempestuous|strong|powerful|heavy|intense|light|gentle|soft|calm|still|moderate|steady|gusty|blustery|variable|calm|pleasant|fine|clear|light|fresh breeze|scant|fine|clam|clear|light|cleared of wind|smooth|baffling wind|eased|light air|fesh|dead calm|died out|hair|no wind|becalmed|not wind enough|baffling|becalmed|cleared up|very light air of wind|light air|perfectly calm|hazed up|wind out|hauling little|baffling|fresh|squally|brisk|stormy|tempestuous|moderate|fresh breeze|strong breeze|smart breeze|fresh blow good breeze|very fresh breeze|moderating|blowy|blowing|variable|breezing|whole sail breeze|changeable|fresh trade winds|high|peak breeze|mederate|fine|perfect|hauled down|steady|fine|wind increasing|breezed up|increasing|wind out|baffling and moderate|blustering|heavy blow|heavy|strong|rough|windstorm |big storm |heavy breeze|gale|stronger|tremendous|squall|hard|blowing a gale|hauled|squalls|hauling|terrific storm |blowing hard|squalls|perfect gale|squall|high winds|blew very heavy|fearfuly|blowed fearfuly|hauling out|rain squalls|growing rough|very moderate, calm|fresh breeze, rough|heavy blow, rough|sair|mode|wind increasing|wind out|squall, moderate|bills of laden wind|hauling little)\\b"
+
+wind_speed_patterns_stem_variants <- "(?i)\\b(strong(er)?|power(ful)?|heav(y|ier)?|intens(e|ity)?|light|gentl(e|y)?|soft|calm|clam|still|moder(ate|ating)?|mederate|mode|steady|gust(y|ing)?|bluster(ed|ing|y)?|blow(y|ing)?|brisk|variabl(e|y)?|changeabl(e|y)?|baffl(e|ed|ing)?|fresh|pleasant|fine|clear|perfect|smooth|eas(e|ed|ing)?|squall(s|y|ing)?|rain\\s+squall(s|y)?|storm(y|ier)?|tempest(uous|uousness)?|windstorm(s)?|big\\s+storm(s)?|terrific\\s+storm(s)?|tremendous|gale(s)?|perfect\\s+gale(s)?|high\\s+wind(s)?|hard|rough|grow(ing)?\\s+rough|fresh\\s+breeze|strong\\s+breeze|smart\\s+breeze|heavy\\s+breeze|very\\s+fresh\\s+breeze|fresh\\s+blow\\s+good\\s+breeze|whole\\s+sail\\s+breeze|peak\\s+breeze|fresh\\s+trade\\s+wind(s)?|light\\s+air|very\\s+light\\s+air(\\s+of\\s+wind)?|dead\\s+calm|perfectly\\s+calm|becalm(ed|ing)?|no\\s+wind|not\\s+wind\\s+enough|die(d|s)?\\s+out|clear(ed)?\\s+up|clear(ed)?\\s+of\\s+wind|wind\\s+out|haze(d)?\\s+up|wind\\s+increas(e|ing)|increas(ing|ed)?|breeze(d)?\\s+up|breez(ing|ed)?|haul(ed|ing)?(\\s+down|\\s+little|\\s+out)?|blow(ing)?\\s+hard|blow(ing)?\\s+a\\s+gale|blew\\s+very\\s+heavy|fearful(ly)?|blowed\\s+fearful(ly)?|high|scant|hair|fesh|sair|bills\\s+of\\s+laden\\s+wind|fresh\\s+breeze,\\s+rough|heavy\\s+blow,\\s+rough|squall,\\s+moderate|very\\s+moderate,\\s+calm|baffling\\s+wind|baffling\\s+and\\s+moderate)\\b"
+
+```
+
+
 ## Location check
 
 ```{r}
-location_data <- read_excel("/Users/francesleduke/Downloads/freelandbunker/data/location_coordinates.xlsx")
+#location_data <- read_excel("/Users/francesleduke/Downloads/freelandbunker/data/location_coordinates.xlsx")
 
 location_data <- read_sheet('https://docs.google.com/spreadsheets/d/10BzzqJA_-lgcrh-M9dWPU1v0vqcZjxXiUpjT5AfsQPc/edit?gid=996642362#gid=996642362')
 
+# how many locations do we have lat and long of?
+
+vis_miss(location_data)
+
+# for local places we might consider having winter harbor coordinates and think about whether these would be included in the weather analysis. 
+
+# fix latitude being read in as a list column
+
 location_coordinates <- location_data |>
-  select(location_list, latitude, longitude)
+  mutate(
+    latitude  = map_dbl(latitude,  ~ if (is.null(.x) || length(.x) == 0) NA_real_ else as.numeric(.x[[1]])),
+    longitude = map_dbl(longitude, ~ if (is.null(.x) || length(.x) == 0) NA_real_ else as.numeric(.x[[1]]))
+  ) |>
+  select(location_list, latitude, longitude) |>
+  mutate(across(c(latitude, longitude), as.numeric))
+
+missing_location_coordinates <- location_coordinates |>
+  filter(is.na(latitude) | is.na(longitude))
+
+location_coordinates <- location_coordinates |>
+  drop_na(latitude, longitude)
+
 
 local_places_coordinates <- location_data |>
   select(local_place_list, 
@@ -657,14 +680,55 @@ local_places_coordinates <- location_data |>
 
 ## Long location data
 
-```{r}
+```{r create long location data}
 journal_long <- journal_data |>
   separate_longer_delim(location, delim = ", ") |>
   separate_longer_delim(location, delim = ",")
 
+# Note that this does increase the number of diary entries and duplicates (from 5353 entries to 7130 entries)
+
 journal_long_loc <- journal_long |>
   left_join(location_coordinates, by = c("location" = "location_list"), relationship = "many-to-many")
   
+```
+
+## Match first location mentioned
+
+```{r create long location data}
+
+loc_lookup <-
+  location_coordinates |>
+  filter(!is.na(latitude), !is.na(longitude)) |>
+  transmute(
+    location_key = str_squish(str_to_lower(location_list)),
+    latitude,
+    longitude
+  ) |>
+  distinct(location_key, .keep_all = TRUE)
+
+first_matching_location <- function(candidates, valid_keys) {
+  if (is.null(candidates) || length(candidates) == 0) return(NA_character_)
+  cand_keys <- str_squish(str_to_lower(as.character(candidates)))
+  hit_idx <- match(TRUE, cand_keys %in% valid_keys)
+  if (is.na(hit_idx)) NA_character_ else cand_keys[[hit_idx]]
+}
+
+journal_data_geocoded <-
+  journal_data |>
+  mutate(
+    matched_location_key = map_chr(
+      location,
+      first_matching_location,
+      valid_keys = loc_lookup$location_key
+    )
+  ) |>
+  left_join(
+    loc_lookup,
+    by = c("matched_location_key" = "location_key")
+  )
+
+
+visdat::vis_miss_summary(journal_data_geocoded)
 ```
 
 
