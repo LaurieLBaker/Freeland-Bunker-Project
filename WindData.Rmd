@@ -29,6 +29,7 @@ output: html_document
 ```{r read-in-packages}
 library(dplyr)
 library(tidyverse)
+library(stringr)
 library(magrittr) 
 library(tidyverse)
 library(tidytext)
@@ -54,14 +55,16 @@ library(readr)
 ```{r read-in-data}
 
 library(readr)
-journals <- read_csv("data/journals.csv") 
+journals <- read_csv("data/journals_all.csv") 
 
+journal_data <- journals |>
+  select(date_mdy, journal_year, month, journal_entry, location, local_place, latitude, longitude)
 ```
 
 
 # Filter for most mentioned items
 
-```{r}
+```{r not in use}
 # Define a function to extract wind direction notation
 
 extract_wind_direction <- function(entry) {
@@ -101,12 +104,7 @@ print(search_results)
 
 ```
 
-
-
-```{r extract-wind-references}
-
-# Wind Search Wind Before and After ----
-
+```{r not in use - direction by direction search list}
 # - (?i) means case-insensitive matching
 # - \\b is a word boundary (matches "wind", "wind," "wind." but not "upwind")
 # - \\s+ one or more whitespace characters
@@ -380,12 +378,23 @@ wind_patterns <- list(
 
 ## Including direction tokens
 
-# Step A: Match any clause containing wind + a direction token anywhere after it.
-
-# Step B: Extract the direction token with stringr::str_extract().
+```
 
 
-library(stringr)
+```{r direction tokens and function definition}
+
+# Wind Search Wind Before and After ----
+
+journal_data <- journal_data |>
+  mutate(wind_mentioned = case_when(str_detect(journal_entry, regex("\\bwind\\b", ignore_case = TRUE)) ~ "yes",
+                                    TRUE ~ NA))
+
+# count(journal_data, wind_mentioned)
+# # A tibble: 2 × 2
+#   wind_mentioned     n
+#   <chr>          <int>
+# 1 NA               816
+# 2 yes             4537
 
 # -------------------------
 # Step A: Match any clause containing "wind" + a direction token anywhere after it
@@ -395,10 +404,9 @@ library(stringr)
 # - Allows: "North East", "North-East", "Northeast", etc.
 # - Includes: "calm" / "variable" only if you want them (commented out).
 
-library(stringr)
 
 # --- Put longer patterns FIRST ---
-dir_token <- paste0(
+dir_token1 <- paste0(
   "(?i)(?<!')\\b(",
   paste(c(
     # 3-letter (16-point) FIRST
@@ -418,10 +426,10 @@ dir_token <- paste0(
     "North[-\\s]*East|North[-\\s]*West|South[-\\s]*East|South[-\\s]*West",
 
     # Cardinal word forms
-    "N(?:orth)?(?:ward|erly|ly)?",
-    "E(?:ast)?(?:ward|erly|ly)?",
-    "S(?:outh)?(?:ward|erly|ly)?",
-    "W(?:est)?(?:ward|erly|ly)?",
+    "N(?:orth)?(?:ward|erly|ernly|ly)?",
+    "E(?:ast)?(?:ward|erly|ernly|ly)?",
+    "S(?:outh)?(?:ward|erly|ernly|ly)?",
+    "W(?:est)?(?:ward|erly|ernly|ly)?",
 
     # Single-letter LAST (so they don't steal E.N.E.)
     "N|E|S|W"
@@ -429,98 +437,229 @@ dir_token <- paste0(
   ")\\b"
 )
 
+## dir token 2
+
+dir_token <- paste0(
+  "(?i)(?<![A-Za-z])(",
+  paste(c(
+    # dotted 16-point
+    "N\\.N\\.E\\.|N\\.N\\.W\\.|E\\.N\\.E\\.|E\\.S\\.E\\.|S\\.S\\.E\\.|S\\.S\\.W\\.|W\\.S\\.W\\.|W\\.N\\.W\\.",
+    # plain 16-point
+    "NNE|NNW|ENE|ESE|SSE|SSW|WSW|WNW",
+    # spaced/dotted-ish 16-point
+    "N\\s*\\.?\\s*N\\s*\\.?\\s*E\\.?|N\\s*\\.?\\s*N\\s*\\.?\\s*W\\.?|E\\s*\\.?\\s*N\\s*\\.?\\s*E\\.?|E\\s*\\.?\\s*S\\s*\\.?\\s*E\\.?|S\\s*\\.?\\s*S\\s*\\.?\\s*E\\.?|S\\s*\\.?\\s*S\\s*\\.?\\s*W\\.?|W\\s*\\.?\\s*S\\s*\\.?\\s*W\\.?|W\\s*\\.?\\s*N\\s*\\.?\\s*W\\.?",
+    # dotted 8-point
+    "N\\.E\\.|N\\.W\\.|S\\.E\\.|S\\.W\\.",
+    # plain 8-point
+    "NE|NW|SE|SW",
+    # spaced/dotted-ish 8-point
+    "N\\s*\\.?\\s*E\\.?|N\\s*\\.?\\s*W\\.?|S\\s*\\.?\\s*E\\.?|S\\s*\\.?\\s*W\\.?",
+    # Unusual fused wording.
+    "NorthE|SouthE|NorthW|SouthW|WNWest",
+    # wordy 16-point + 8-point + cardinals
+    "West[-\\s]+North[-\\s]+West",
+    "North[-\\s]*Northeast|North[-\\s]*Northwest|South[-\\s]*Southeast|South[-\\s]*Southwest",
+    "East[-\\s]*Northeast|East[-\\s]*Southeast|West[-\\s]*Northwest|West[-\\s]*Southwest",
+    "North[-\\s]*East|North[-\\s]*West|South[-\\s]*East|South[-\\s]*West",
+    "N(?:orth)?(?:wardly|ward|Easterly|easterly|erly|Westerly|westerly|ly)?",
+    "E(?:ast)?(?:wardly|ward|asternly|asterly|astly|ly)?",
+    "S(?:outh)?(?:wardly|ward|outhernly|outherly|outhly|Easterly|easterly|Westerly|westerly|ly)?",
+    "W(?:est)?(?:wardly|ward|esternly|esterly|estly|ly)?",
+    # single letters last
+    "N|E|S|W"
+  ), collapse="|"),
+  ")(?![A-Za-z])"
+)
+
 wind_clause_regex <- paste0("(?i)\\bwind\\b[^\\n\\.;:]*?", dir_token, "[^\\n\\.;:]*")
 
-# Example: get the clause (optional, but often useful for debugging)
+
+# -------- wind_clause_regex explained ------- #
+# Full structure:
+#   (?i)\bwind\b[^\n\.;:]*?DIRTOKEN[^\n\.;:]*
+#
+# Explanation of each component:
+#
+# (?i)
+#   Case-insensitive flag.
+#   Matches "wind", "Wind", "WIND", etc., and applies to dir_token as well.
+#
+# \bwind\b
+#   Matches the standalone word "wind".
+#   \b = word boundary (prevents matching "window" or "windswept").
+#
+# [^\n\.;:]*?
+#   Matches any characters EXCEPT:
+#     - newline (\n)
+#     - period (.)
+#     - semicolon (;)
+#     - colon (:)
+#   *  = zero or more characters
+#   ?  = lazy (non-greedy)
+#
+#   This ensures:
+#     - We stay within the same clause (do not cross sentence punctuation).
+#     - We match the shortest text between "wind" and dir_token.
+#
+# dir_token
+#   Dynamically inserted direction token (e.g., "North", "SW", etc.).
+#   The regex requires this token to appear after "wind" within the same clause.
+#
+# [^\n\.;:]*
+#   Matches the rest of the clause (up to punctuation or newline).
+# ------
+
+# Get the wind clause
 extract_wind_clause <- function(x) {
   str_extract(x, wind_clause_regex)
 }
+
+
+# -------------------------
+# Step B: look before wind if no direction found
+# -------------------------
+# 
+# extract_first_wind_direction <- function(x) {
+#   seg <- extract_wind_segment(x)
+#   if (is.na(seg)) return(NA_character_)
+# 
+#   toks <- str_extract_all(seg, dir_token)[[1]]
+#   if (length(toks) >= 1) return(toks[1])
+# 
+#   # fallback: look just BEFORE "wind" (for "Southerly is the wind ...")
+#   loc <- str_locate(x, regex("\\bwind\\b", ignore_case = TRUE))
+#   pre <- str_sub(x, max(1, loc[1,1] - 60), loc[1,1] - 1)
+#   pre_toks <- str_extract_all(pre, dir_token)[[1]]
+#   if (length(pre_toks) >= 1) return(pre_toks[length(pre_toks)])
+# 
+#   NA_character_
+# }
+
+# extract_second_wind_direction <- function(x) {
+#   seg <- extract_wind_segment(x)
+#   if (is.na(seg)) return(NA_character_)
+# 
+#   toks <- str_extract_all(seg, dir_token)[[1]]
+#   if (length(toks) >= 2) return(toks[2])
+#   NA_character_
+# }
+
 
 # -------------------------
 # Step B: Extract the direction token with stringr::str_extract()
 # -------------------------
 # First grab the wind clause, then pull out the first direction token from it.
+
 extract_first_wind_direction <- function(x) {
   clause <- str_extract(x, wind_clause_regex)
   str_extract(clause, dir_token)
 }
 
+wind_before_regex_clause <- "(?i)[^\\n\\.;:]*?\\bwind\\b"
 
-
-
-extract_second_wind_direction <- function(x) {
-  clause <- str_extract(x, wind_clause_regex)
-  
-  tokens <- str_extract_all(clause, dir_token)
-  
-  sapply(tokens, function(t) {
-    if (length(t) >= 2) t[2] else NA_character_
-  })
+extract_direction_before_wind <- function(x) {
+  clause <- str_extract(x, wind_before_regex_clause)
+  str_extract(clause, dir_token)
 }
 
+extract_second_wind_direction <- function(x) {
+clause <- str_extract(x, wind_clause_regex)
+
+tokens <- str_extract_all(clause, dir_token)
+
+sapply(tokens, function(t) {
+  if (length(t) >= 2) t[2] else NA_character_
+})
+}
+
+```
+
+```{r Normalize Wind Direction}
 ## Normalize
 
+# compass map
+
 compass_map <- c(
-  # Cardinal
-  "north" = "N",
-  "south" = "S",
-  "east"  = "E",
-  "west"  = "W",
+  # cardinal + common variants
+  north      = "N",
+  northly    = "N",
+  northerly  = "N",
+  northward  = "N",
+  south      = "S",
+  southly    = "S",
+  southerly  = "S",
+  southernly  = "S",  
+  southward  = "S",
+  east       = "E",
+  eastly     = "E",
+  easterly   = "E",
+  easternly  = "E",
+  eastward   = "E",
+  west       = "W",
+  westward   = "W",
+  westerly   = "W",
 
-  # Intercardinal (ordinal)
-  "northeast" = "NE",
-  "northwest" = "NW",
-  "southeast" = "SE",
-  "southwest" = "SW",
+  # intercardinal words
+  northeast  = "NE",
+  northwest  = "NW",
+  southeast  = "SE",
+  southwest  = "SW",
+  # intercardinal words (variants & misspellings)
+  northeasterly  = "NE",
+  northasterly   = "NE",
+  northeastward  = "NE",
+  northwardeast  = "NE",
+  northe         = "NE",
 
-  # Secondary intercardinal
-  "northnortheast" = "NNE",
-  "eastnortheast"  = "ENE",
-  "eastsoutheast"  = "ESE",
-  "southsoutheast" = "SSE",
-  "southsouthwest" = "SSW",
-  "westsouthwest"  = "WSW",
-  "westnorthwest"  = "WNW",
-  "northnorthwest" = "NNW",
+  northwesterly  = "NW",
+  northwester    = "NW",
+  northwestward  = "NW",
+  northwardwest  = "NW",
+  northw         = "NW",
 
-  # Tertiary (by-points)
-  "northbyeast" = "NbE",
-  "northeastbyeast" = "NEbE",
-  "eastnortheast" = "ENE",
-  "eastbyeast" = "EbE",
-  "eastbysouth" = "EbS",
-  "eastsoutheast" = "ESE",
-  "southeastbysouth" = "SEbS",
-  "southbyeast" = "SbE",
-  "southbysouth" = "SbS",
-  "southsouthwest" = "SSW",
-  "southwestbysouth" = "SWbS",
-  "westbysouth" = "WbS",
-  "westbywest" = "WbW",
-  "westbynorth" = "WbN",
-  "westnorthwest" = "WNW",
-  "northwestbynorth" = "NWbN",
-  "northbynorth" = "NbN",
-  "northnorthwest" = "NNW"
+  southeasterly  = "SE",
+  southasterly   = "SE",
+  southeastward  = "SE",
+  southwardeast  = "SE",
+  southe         = "SE",
+
+  southwesterly  = "SW",
+  southwester    = "SW",
+  southwestward  = "SW",
+  southwardwest  = "SW",
+  southw         = "SW",
+
+  # 16-point words
+  northnortheast = "NNE",
+  eastnortheast  = "ENE",
+  eastsoutheast  = "ESE",
+  southsoutheast = "SSE",
+  southsouthwest = "SSW",
+  westsouthwest  = "WSW",
+  westnorthwest  = "WNW",
+  northnorthwest = "NNW",
+  # 16-point fused-with-ward variants
+  northnortheastward = "NNE",
+  eastnortheastward  = "ENE",
+  eastsoutheastward  = "ESE",
+  southsoutheastward = "SSE",
+  southsouthwestward = "SSW",
+  westsouthwestward  = "WSW",
+  westnorthwestward  = "WNW",
+  northnorthwestward = "NNW",
+
+# weird OCR mashups seen in logs
+  wnwest = "WNW",
+  nnew   = "NNE",
+  enes   = "ENE",
+  eses   = "ESE",
+  sseast = "SSE"
 )
 
-
-# -------------------------
-# Usage on a character vector `journal_entry`
-# -------------------------
-journal_data$wind_clause      <- extract_wind_clause(journal_data$journal_entry)
-journal_data$wind_dir_token   <- extract_first_wind_direction(journal_data$journal_entry)
-
-journal_data$wind_dir_token_2   <- extract_second_wind_direction(journal_data$journal_entry)
-
 normalize_direction <- function(x) {
-
   x_clean <- tolower(x)
-
-  # remove punctuation & spaces
   x_clean <- gsub("[^a-z]", "", x_clean)
 
-  # handle simple abbreviations like n, nw, sse
   abbr <- toupper(x_clean)
   if (abbr %in% c(
     "N","S","E","W",
@@ -529,31 +668,92 @@ normalize_direction <- function(x) {
     "SSW","WSW","WNW","NNW"
   )) return(abbr)
 
-  # look up word forms
-  if (x_clean %in% names(compass_map))
-    return(compass_map[[x_clean]])
+  if (!is.na(x_clean) && x_clean %in% names(compass_map)) {
+    return(unname(compass_map[[x_clean]]))
+  }
 
-  # otherwise return NA
-  return(NA_character_)
+  NA_character_
 }
 
-journal_data$wind_dir_clean <- vapply(
-  journal_data$wind_dir_token,
-  normalize_direction,
-  character(1)
-)
-
-journal_data$wind_dir_clean_2 <- vapply(
-  journal_data$wind_dir_token_2,
-  normalize_direction,
-  character(1)
-)
-
-
-journal_data |> filter(!is.na(wind_mentioned)) |> select(journal_entry, wind_clause, wind_dir_token, wind_dir_token_2, wind_mentioned, wind_dir_clean, wind_dir_clean_2)
+normalize_direction_vec <- function(x) {
+  vapply(x, normalize_direction, character(1))
+}
 ```
 
-```{r original wind direction patterns, eval = FALSE}
+
+```{r wind_extraction}
+# -------------------------
+# Usage on a character vector `journal_entry`
+# -------------------------
+# Step A: extract clause from journal_entry
+journal_data <- journal_data |>
+  mutate(wind_clause = extract_wind_clause(journal_entry))
+
+# Step B: extract first + second direction tokens from journal_entry
+journal_data <- journal_data |>
+  mutate(wind_dir_token = coalesce(extract_first_wind_direction(journal_entry),
+                                   extract_direction_before_wind(journal_entry)
+  ),
+          wind_dir_token_2 = extract_second_wind_direction(journal_entry))
+
+# Normalize to standard codes
+journal_data <- journal_data |>
+  mutate(wind_dir_code_1 = normalize_direction_vec(wind_dir_token),
+        wind_dir_code_2 = normalize_direction_vec(journal_data$wind_dir_token_2))
+
+
+
+wind_data <- journal_data |> 
+  filter(!is.na(wind_mentioned)) |> 
+  select(journal_entry, wind_clause, wind_dir_token, wind_dir_code_1, wind_dir_code_2)
+```
+
+
+```{r check missing wind locations}
+missing_wind <- journal_data |>
+  filter(wind_mentioned == "yes", is.na(wind_dir_code_1)) |>
+  select(date_mdy, journal_entry, wind_mentioned, wind_clause, wind_dir_code_1)
+
+write_csv(missing_wind, file = "data/improve_wind_search.csv")
+```
+
+
+```{r visualize wind location mentions}
+
+journal_data |>
+  ggplot(aes(y = fct_rev(fct_infreq(wind_dir_code_1)))) +
+  geom_bar() +
+  ylab("Wind Direction")
+
+
+```
+
+
+```{r calculate wind meteor direction}
+
+journal_data <- journal_data |>
+  mutate(wind_meteor = case_when(wind_dir_code_1 == "N" ~ 0,
+                                  wind_dir_code_1 == "NNE" ~ 22.5,
+                                  wind_dir_code_1 == "NE" ~ 45,
+                                  wind_dir_code_1 == "ENE" ~ 67.5,
+                                  wind_dir_code_1 == "E" ~ 90,
+                                  wind_dir_code_1 == "ESE" ~ 112.5,
+                                  wind_dir_code_1 == "SE" ~ 135,
+                                  wind_dir_code_1 == "SSE" ~ 157.5,
+                                  wind_dir_code_1 == "S" ~ 180,
+                                  wind_dir_code_1 == "SSW" ~ 202.5,
+                                  wind_dir_code_1 == "SW" ~ 225,
+                                  wind_dir_code_1 == "WSW" ~ 247.5,
+                                  wind_dir_code_1 == "W" ~ 270,
+                                  wind_dir_code_1 == "WNW" ~ 292.5,
+                                  wind_dir_code_1 == "NW" ~ 315,
+                                  wind_dir_code_1 == "NNW" ~ 337.5,
+                                 TRUE ~ NA)) 
+  
+```
+
+
+```{r not in use original wind direction patterns, eval = FALSE}
 
 ## Patterns to find ----
 
@@ -630,6 +830,8 @@ write_csv(missed_wind, file = "data/missed_wind_feb_4.csv")
 ```
 
 
+
+
 ```{r wind-speed-patterns}
 # Wind speed patterns 
 
@@ -639,6 +841,8 @@ wind_speed_patterns_stem_variants <- "(?i)\\b(strong(er)?|power(ful)?|heav(y|ier
 
 ```
 
+
+# Wind Location
 
 ## Location check
 
@@ -680,7 +884,7 @@ local_places_coordinates <- location_data |>
 
 ## Long location data
 
-```{r create long location data}
+```{r create long location data, eval = FALSE}
 journal_long <- journal_data |>
   separate_longer_delim(location, delim = ", ") |>
   separate_longer_delim(location, delim = ",")
@@ -694,7 +898,16 @@ journal_long_loc <- journal_long |>
 
 ## Match first location mentioned
 
-```{r create long location data}
+```{r journal entries with location}
+# how many journal entries have a location associated with them?
+
+journal_data |>
+  select(date_mdy, journal_entry, location) |>
+  miss_var_summary()
+```
+
+
+```{r match_first_location}
 
 loc_lookup <-
   location_coordinates |>
@@ -728,49 +941,23 @@ journal_data_geocoded <-
   )
 
 
-visdat::vis_miss_summary(journal_data_geocoded)
+journal_data_geocoded |>
+  select(date_mdy, journal_entry, location, latitude.x, longitude.x, latitude.y, longitude.y) |>
+  miss_var_summary()
 ```
 
 
 ## Which rows are missing a wind direction?
 
 ```{r}
-journal_wind <- journal_long_loc |>
-  select(date_mdy, month, journal_entry, wind_direction, wind_meteor, wind_mentioned, wind_speed_description, location, latitude.y, longitude.y)
+journal_wind <- journal_data_geocoded |>
+  select(date_mdy, month, journal_entry, wind_dir_code1, wind_dir_clean, wind_meteor, wind_mentioned, wind_speed_description, location, latitude.y, longitude.y)
 
 visdat::vis_miss(journal_wind)
 ```
 
 
-
-## How frequently did different wind directions come up?
-
-```{r}
-
-journal_wind |> 
-  count(wind_direction)
-
-# Which are missing a wind direction. Is any wind detected?
-
-improve_wind_search <- journal_wind |>
-  filter(wind_mentioned == "Yes" & wind_direction == "No wind") |>
-  distinct(journal_entry)
-
-improve_wind_speed_search <- journal_wind |>
-  filter(wind_mentioned == "Yes" & is.na(wind_speed_description)) |>
-  distinct(journal_entry)
-
-write_csv(improve_wind_search, file = "missing_wind.csv")
-
-write_csv(improve_wind_search, file = "missing_wind_speed.csv")
-
-# 
-
-```
-
-
-
-## Frances' Analysis Starts Here
+# Frances' Analysis Starts Here
 
 ## Read-in updated wind-speed categorizations 
 
@@ -782,13 +969,13 @@ head(improve_wind_search)
 
 head(improve_wind_speed_search)
 
-wind_speed_patterns <- read_excel("/Users/francesleduke/Downloads/freelandbunker copy/data/Beaufort Wind Cats.xlsx")
+wind_speed_patterns <- read_excel("data/Beaufort Wind Cats.xlsx")
 
 
 ```
 # Create a dataframe that filters out rows with changing metadata causing duplicate rows to exist (i.e. multiple rows for one date causing duplicate datapoints due to location changes)
 
-```{r}
+```{r not in use duplicates}
 
 # keep only unique combinations of wind columns 
 
@@ -817,7 +1004,7 @@ journal_wind_unique_duplicates <- journal_wind_unique |>
 ```
 
 
-```{r}
+```{r not in use date-fix}
 # fix dates 
 
 journal_wind_unique <- journal_wind_unique |>
@@ -832,7 +1019,7 @@ journal_wind_unique <- journal_wind_unique |>
   
 ```
 
-```{r}
+```{r not in use unique - word count, eval = FALSE}
 
 journal_wind_unique <- journal_wind_unique |>
   mutate(
@@ -854,7 +1041,7 @@ journal_wind_unique <- journal_wind_unique |>
 
 ```
 
-```{r}
+```{r not in use unique - monthly_words, eval = FALSE}
 
 monthly_words <- journal_wind_unique |>
   group_by(year, month) |>
@@ -867,7 +1054,7 @@ monthly_words <- journal_wind_unique |>
 ```
 
 
-```{r}
+```{r not in use unique - monthly words plot, eval = FALSE}
 ggplot(monthly_words, aes(x = month, y = total_words)) +
   geom_point() +
   facet_wrap(~ year, ncol = 3) +
@@ -881,9 +1068,67 @@ ggplot(monthly_words, aes(x = month, y = total_words)) +
 ggsave(filename = "howoften.jpg", width = 10, height = 5)
 ```
 
-# How many days have multiple wind observations? 
+```{r monthly writing over time}
+journal_data <- journal_data |>
+  mutate(
+    # count words in the journal entry (non-whitespace runs)
+    word_count = str_count(journal_entry, "\\S+"),
+    # ensure month is ordered Jan -> Dec
+    month_abb = month(date_mdy, abbr = TRUE, label = TRUE)) |>
+  drop_na(month_abb)
 
-```{r}
+monthly_words <- journal_data |>
+  group_by(journal_year, month_abb) |>
+  summarise(
+    total_words = sum(word_count, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+
+ggplot(monthly_words, aes(x = month_abb, y = total_words)) +
+  geom_point() +
+  geom_line(aes(group = journal_year)) + 
+  facet_wrap(~ journal_year, ncol = 4) +
+  labs(
+    title = "Monthly Writing Activity",
+    subtitle = "Total number of words written per month, faceted by year",
+    x = "Month",
+    y = "Total words written"
+  )
+
+ggsave(filename = "figures/howoften.jpg", width = 15, height = 10)
+```
+
+```{r yearly writing over time}
+
+yearly_words <- journal_data |>
+  group_by(journal_year) |>
+  summarise(
+    total_words = sum(word_count, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+
+ggplot(yearly_words, aes(x = journal_year, y = total_words)) +
+  geom_point() +
+  geom_line() +
+  labs(
+    title = "Yearly Writing Activity",
+    subtitle = "Total number of words each year",
+    x = "Year",
+    y = "Total words written"
+  )
+
+ ggsave(filename = "figures/howoften_year.jpg", width = 15, height = 10)
+```
+
+
+
+# How many days have multiple wind observations?
+
+Question: Do we want to include multiple wind directions in a day?
+
+```{r multiple wind observations}
 # Days with multiple wind observations
 
 journal_wind_unique |>
@@ -895,7 +1140,7 @@ journal_wind_unique |>
 
 ## Create a data frame for wind
 
-```{r}
+```{r wind speed knots and conversions}
 
 journal_wind_df <- journal_wind_unique
 
@@ -964,7 +1209,7 @@ journal_wind_df <- journal_wind_df |>
 
 ## Add wind conversions and convert to radians 
 
-```{r}
+```{r wind conversions to radians}
 
 journal_wind_df <- journal_wind_df |>
  
@@ -985,7 +1230,7 @@ journal_wind_df <- journal_wind_df |>
 
 ## Calculate u and v vectors 
 
-```{r}
+```{r calculate u and v vectors}
 journal_wind_df <- journal_wind_df |>
   mutate(u_vector = wind_speed_knots*(cos(wind_dir_rad))) 
 
@@ -993,9 +1238,10 @@ journal_wind_df <- journal_wind_df |>
   mutate(v_vector = wind_speed_knots*(sin(wind_dir_rad)))) 
 
 ```
+
 ## Calculate the magnitude of each vector 
 
-```{r}
+```{r calculate vector magnitude}
 
  journal_wind_df <- journal_wind_df |>
   mutate(vector_magnitude = sqrt((u_vector^2)+(v_vector^2))) 
@@ -1004,7 +1250,7 @@ journal_wind_df <- journal_wind_df |>
 
 ## Create a new column to represent months as numeric values, excluding NA values
 
-```{r}
+```{r create month numeric column}
 
 journal_wind_df <- journal_wind_df |>
   filter(!is.na(month)) |>
@@ -1015,7 +1261,8 @@ journal_wind_df <- journal_wind_df |>
 ```
 
 # Creating a beaufort column 
-```{r}
+
+```{r add beaufort column}
 
 # create a beaufort column 
 
@@ -1057,7 +1304,7 @@ journal_wind_df <- journal_wind_df |>
 
 # Make a dataframe to view beaufort frequencies: How often did x beaufort level come up? 
 
-```{r}
+```{r look at beaufort frequencies and levels}
 
 # Group for cardinal representation 
 beaufort_grouped <- journal_wind_df |>

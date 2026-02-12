@@ -69,7 +69,15 @@ journal_85 <- read_sheet('https://docs.google.com/spreadsheets/d/1JBFWlfNKH8T1b6
 journal_86 <- read_sheet('https://docs.google.com/spreadsheets/d/1FGM7h5C-JEg4QdxWTLT-qQMk_F9ssqMHM7NACaEd6D0/edit?gid=0#gid=0')
 journal_87 <- read_sheet('https://docs.google.com/spreadsheets/d/1L1wsbbxKNIUEXlqUZVBIHzbgGH9wWbyp0RvFrgODG68/edit?gid=0#gid=0')
 journal_88 <- read_sheet('https://docs.google.com/spreadsheets/d/1lRYPXqJN_QTghasyfelmWrECUzqH6WqWje5czYWOCx8/edit?gid=0#gid=0')
-
+journal_89 <- read_sheet('https://docs.google.com/spreadsheets/d/1mrOoYOon7hJqYskRp-1G32RQsPQv-9Lrw4vEYMqe3qE/edit?gid=0#gid=0')
+journal_90 <- read_sheet('https://docs.google.com/spreadsheets/d/1vDXm7NjfJzJM6pGBggPZ0UZu419eIlCR2Gf6323SYPo/edit?gid=0#gid=0')
+journal_91 <- read_sheet('https://docs.google.com/spreadsheets/d/1Kc559RqmPraFuRnxGgHcp176BDjnnO6YZ_-Z-y87Tgs/edit?gid=0#gid=0')
+journal_92 <- read_sheet('https://docs.google.com/spreadsheets/d/1QFxi-iiCfUYwEl223lNhE1__h3OD1HEsme4K-0N6fiM/edit?gid=0#gid=0')
+journal_93 <- read_sheet('https://docs.google.com/spreadsheets/d/1MKM3bNG2VyV1MVuK7g0JIEKB1v4N4Pq2f21I9RDHpcI/edit?gid=0#gid=0')
+journal_94 <- read_sheet('https://docs.google.com/spreadsheets/d/1jMP3OdoJraDnJv875pxpEXB36MeQK7CDRHgX23tOdts/edit?gid=0#gid=0')
+journal_95 <- read_sheet('https://docs.google.com/spreadsheets/d/1yYFq22QYgFd_BJY-fbPF7MZVwVqnAy2qMJP4CGziKAU/edit?gid=0#gid=0')
+journal_96 <- read_sheet('https://docs.google.com/spreadsheets/d/1JXfSS-iQmPweeALOaaA9C5AVWuca0R090H4HpKdDG1c/edit?gid=0#gid=0')
+journal_97 <- read_sheet('https://docs.google.com/spreadsheets/d/1qcmaVwFN796BMvGRzgUXNMJ2BpdYO1kC1Y1ovQWPaxg/edit?gid=0#gid=0')
 ```
 
 ```{r assign-new-column}
@@ -89,6 +97,16 @@ journal_84$journal <- 13
 journal_85$journal <- 14
 journal_86$journal <- 15
 journal_87$journal <- 16
+journal_88$journal <- 17
+journal_89$journal <- 18
+journal_90$journal <- 19
+journal_91$journal <- 20
+journal_92$journal <- 21
+journal_93$journal <- 22
+journal_94$journal <- 23
+journal_95$journal <- 24
+journal_96$journal <- 25
+journal_97$journal <- 26
 
 
 
@@ -176,16 +194,16 @@ journal_86 <- clean_journal(journal_86, year = 1886)
 journal_87 <- clean_journal(journal_87, year = 1887)
 
 ## Other journals to eventually add
-# journal_88 <- clean_journal(journal_88, year = 1888)
-# journal_89 <- clean_journal(journal_89, year = 1889)
-# journal_90 <- clean_journal(journal_90, year = 1890)
-# journal_91 <- clean_journal(journal_91, year = 1891)
-# journal_92 <- clean_journal(journal_92, year = 1892)
-# journal_93 <- clean_journal(journal_93, year = 1893)
-# journal_94 <- clean_journal(journal_94, year = 1894)
-# journal_95 <- clean_journal(journal_95, year = 1895)
-# journal_96 <- clean_journal(journal_96, year = 1896)
-# journal_97 <- clean_journal(journal_97, year = 1897)
+journal_88 <- clean_journal(journal_88, year = 1888)
+journal_89 <- clean_journal(journal_89, year = 1889)
+journal_90 <- clean_journal(journal_90, year = 1890)
+journal_91 <- clean_journal(journal_91, year = 1891)
+journal_92 <- clean_journal(journal_92, year = 1892)
+journal_93 <- clean_journal(journal_93, year = 1893)
+journal_94 <- clean_journal(journal_94, year = 1894)
+journal_95 <- clean_journal(journal_95, year = 1895)
+journal_96 <- clean_journal(journal_96, year = 1896)
+journal_97 <- clean_journal(journal_97, year = 1897)
 ```
 
 
@@ -385,6 +403,8 @@ journal_87 <- journal_87 |>
 ```{r join-datasets}
 journals <- dplyr::bind_rows(journal_71_72, journal_73, journal_74, journal_75, journal_76, journal_77, journal_78, journal_79, journal_80, journal_81, journal_82, journal_83, journal_84, journal_85, journal_86, .id = "journal")
 
+journals_all <- dplyr::bind_rows(journal_71_72, journal_73, journal_74, journal_75, journal_76, journal_77, journal_78, journal_79, journal_80, journal_81, journal_82, journal_83, journal_84, journal_85, journal_86, journal_87, journal_88, journal_89, journal_90, journal_91, journal_92, journal_93, journal_94, journal_95, journal_96,  journal_97, .id = "journal")
+
 ```
 
 ```{r}
@@ -393,17 +413,18 @@ naniar::vis_miss(journals)
 
 ```{r check dates}
 
-journals |>
+journals_all |>
   mutate(month_check = lubridate::month(date_mdy, label = TRUE, abbr = FALSE)) |>
   filter(month != month_check) |>
   select(journal, date_mdy, month, month_check)
 
 years_to_check <- journals |>
   mutate(year_check = lubridate::year(date_mdy)) |>
-  filter(year_check < 1870 | year_check > 1886 | year_check != journal_year) |>
+  filter(year_check < 1870 | year_check > 1997 | year_check != journal_year) |>
   distinct(year_check, journal_year)
 
-journals |>
+journals_all |>
+  mutate(year_check = lubridate::year(date_mdy)) |>
   mutate(year = lubridate::year(date_mdy)) |>
   filter(year %in% year_check) |>
   select(journal, date_mdy, month)
@@ -414,5 +435,7 @@ journals |>
 
 ```{r write file}
 write_csv(journals, file = "data/journals.csv")
+write_csv(journals_all, file = "data/journals_all.csv")
+
 ```
 
