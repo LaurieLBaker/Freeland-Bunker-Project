@@ -1,0 +1,118 @@
+---
+title: "WindLocation"
+output: html_document
+---
+
+## Read in Wind Data from WindData -> WindSpeed script
+
+# Wind Location
+
+## Location check
+
+```{r location check}
+
+location_data <- read_sheet('https://docs.google.com/spreadsheets/d/10BzzqJA_-lgcrh-M9dWPU1v0vqcZjxXiUpjT5AfsQPc/edit?gid=996642362#gid=996642362')
+
+# how many locations do we have lat and long of?
+
+vis_miss(location_data)
+
+# for local places we might consider having winter harbor coordinates and think about whether these would be included in the weather analysis. 
+
+# fix latitude being read in as a list column
+
+location_coordinates <- location_data |>
+  mutate(
+    latitude  = map_dbl(latitude,  ~ if (is.null(.x) || length(.x) == 0) NA_real_ else as.numeric(.x[[1]])),
+    longitude = map_dbl(longitude, ~ if (is.null(.x) || length(.x) == 0) NA_real_ else as.numeric(.x[[1]]))
+  ) |>
+  select(location_list, latitude, longitude) |>
+  mutate(across(c(latitude, longitude), as.numeric))
+
+missing_location_coordinates <- location_coordinates |>
+  filter(is.na(latitude) | is.na(longitude))
+
+location_coordinates <- location_coordinates |>
+  drop_na(latitude, longitude)
+
+
+local_places_coordinates <- location_data |>
+  select(local_place_list, 
+         local_place_latitude, 
+         local_place_longitude) |>
+  rename(latitude = local_place_latitude,
+         longitude = local_place_longitude)
+```
+
+## Long location data
+
+```{r create long location data, eval = FALSE}
+journal_long <- journal_data |>
+  separate_longer_delim(location, delim = ", ") |>
+  separate_longer_delim(location, delim = ",")
+
+# Note that this does increase the number of diary entries and duplicates (from 5353 entries to 7130 entries)
+
+journal_long_loc <- journal_long |>
+  left_join(location_coordinates, by = c("location" = "location_list"), relationship = "many-to-many")
+  
+```
+
+## Match first location mentioned
+
+```{r journal entries with location}
+# how many journal entries have a location associated with them?
+
+journal_data |>
+  select(date_mdy, journal_entry, location) |>
+  miss_var_summary()
+```
+
+
+```{r match_first_location}
+
+loc_lookup <-
+  location_coordinates |>
+  filter(!is.na(latitude), !is.na(longitude)) |>
+  transmute(
+    location_key = str_squish(str_to_lower(location_list)),
+    latitude,
+    longitude
+  ) |>
+  distinct(location_key, .keep_all = TRUE)
+
+first_matching_location <- function(candidates, valid_keys) {
+  if (is.null(candidates) || length(candidates) == 0) return(NA_character_)
+  cand_keys <- str_squish(str_to_lower(as.character(candidates)))
+  hit_idx <- match(TRUE, cand_keys %in% valid_keys)
+  if (is.na(hit_idx)) NA_character_ else cand_keys[[hit_idx]]
+}
+
+journal_data_geocoded <-
+  journal_data |>
+  mutate(
+    matched_location_key = map_chr(
+      location,
+      first_matching_location,
+      valid_keys = loc_lookup$location_key
+    )
+  ) |>
+  left_join(
+    loc_lookup,
+    by = c("matched_location_key" = "location_key")
+  )
+
+
+journal_data_geocoded |>
+  select(date_mdy, journal_entry, location, latitude.x, longitude.x, latitude.y, longitude.y) |>
+  miss_var_summary()
+```
+
+## Which rows are missing a wind direction?
+
+```{r}
+journal_wind <- journal_data_geocoded |>
+  select(date_mdy, month, journal_entry, wind_dir_code1, wind_dir_clean, wind_meteor, wind_mentioned, wind_speed_description, location, latitude.y, longitude.y)
+
+visdat::vis_miss(journal_wind)
+```

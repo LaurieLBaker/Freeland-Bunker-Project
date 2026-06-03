@@ -1,0 +1,60 @@
+---
+title: "WritingFrequency"
+output: html_document
+---
+
+
+```{r monthly writing over time}
+journal_data <- journal_data |>
+  mutate(
+    # count words in the journal entry (non-whitespace runs)
+    word_count = str_count(journal_entry, "\\S+"),
+    # ensure month is ordered Jan -> Dec
+    month_abb = month(date_mdy, abbr = TRUE, label = TRUE)) |>
+  drop_na(month_abb)
+
+monthly_words <- journal_data |>
+  group_by(journal_year, month_abb) |>
+  summarise(
+    total_words = sum(word_count, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+
+ggplot(monthly_words, aes(x = month_abb, y = total_words)) +
+  geom_point() +
+  geom_line(aes(group = journal_year)) + 
+  facet_wrap(~ journal_year, ncol = 4) +
+  labs(
+    title = "Monthly Writing Activity",
+    subtitle = "Total number of words written per month, faceted by year",
+    x = "Month",
+    y = "Total words written"
+  )
+
+ggsave(filename = "figures/howoften.jpg", width = 15, height = 10)
+```
+
+
+```{r yearly writing over time}
+
+yearly_words <- journal_data |>
+  group_by(journal_year) |>
+  summarise(
+    total_words = sum(word_count, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+
+ggplot(yearly_words, aes(x = journal_year, y = total_words)) +
+  geom_point() +
+  geom_line() +
+  labs(
+    title = "Yearly Writing Activity",
+    subtitle = "Total number of words each year",
+    x = "Year",
+    y = "Total words written"
+  )
+
+ ggsave(filename = "figures/howoften_year.jpg", width = 15, height = 10)
+```

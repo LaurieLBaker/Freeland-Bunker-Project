@@ -1,0 +1,2096 @@
+---
+title: "Wind Data Explorations"
+author: "Laurie and Frances"
+date: '2026-05-13'
+output: html_document
+---
+
+```{r install-packages} 
+# install.packages(c("tidyverse", 
+#                   "tidytext",
+#                   "stopwords",
+#                   "widyr",
+#                   "tidygraph",
+#                   "tidylo",
+#                   "ggraph",
+ #                  "wordcloud",
+  #                 "dplyr", 
+# "googlesheets4",
+# "visdat",
+# "naniar",
+#"gargle"))
+#install.packages("magrittr")
+#install.packages("readxl")
+#install.packages("dplyr")
+
+```
+
+
+```{r read-in-packages}
+library(dplyr)
+library(tidyverse)
+library(stringr)
+library(magrittr) 
+library(tidyverse)
+library(tidytext)
+library(googlesheets4)
+library(gargle)
+library(googledrive)
+library(visdat)
+library(naniar)
+library(magrittr) 
+library(dplyr) 
+library(readxl)
+library(writexl)
+library(circular)
+library(forcats)
+library(openair)
+library(UpSetR)
+library(readr)
+
+```
+
+## Read in journals data
+
+```{r read-in-data}
+
+library(readr)
+journals <- read_csv("../data/journals_all.csv") 
+
+journal_data <- journals |>
+  select(date_mdy, journal_year, month, journal_entry, location, local_place, latitude, longitude) 
+
+journal_data <- journal_data |>
+  mutate(wind_mentioned = case_when(str_detect(journal_entry, regex("\\bwind\\b", ignore_case = TRUE)) ~ "yes",
+                                    TRUE ~ NA))
+```
+
+
+# Set up Direction Tokens
+
+```{r direction tokens and function definition}
+
+# Wind Search Wind Before and After ----
+
+journal_data <- journal_data |>
+  mutate(wind_mentioned = case_when(str_detect(journal_entry, regex("\\bwind\\b", ignore_case = TRUE)) ~ "yes",
+                                    TRUE ~ NA))
+
+
+dir_token <- paste0(
+  "(?i)(?<![A-Za-z'])(",
+  paste(c(
+    # dotted 16-point
+    "N\\.N\\.E\\.|N\\.N\\.W\\.|E\\.N\\.E\\.|E\\.S\\.E\\.|S\\.S\\.E\\.|S\\.S\\.W\\.|W\\.S\\.W\\.|W\\.N\\.W\\.",
+    # plain 16-point
+    "NNE|NNW|ENE|ESE|SSE|SSW|WSW|WNW",
+    # spaced/dotted-ish 16-point
+    "N\\s*\\.?\\s*N\\s*\\.?\\s*E\\.?|N\\s*\\.?\\s*N\\s*\\.?\\s*W\\.?|E\\s*\\.?\\s*N\\s*\\.?\\s*E\\.?|E\\s*\\.?\\s*S\\s*\\.?\\s*E\\.?|S\\s*\\.?\\s*S\\s*\\.?\\s*E\\.?|S\\s*\\.?\\s*S\\s*\\.?\\s*W\\.?|W\\s*\\.?\\s*S\\s*\\.?\\s*W\\.?|W\\s*\\.?\\s*N\\s*\\.?\\s*W\\.?",
+    # Unusual fused wording (Possibly think about coming after wordy 16-point)
+    "NorthE|SouthE|NorthW|SouthW|WNWest",
+    #dotted 8-point
+    "N\\.E\\.|N\\.W\\.|S\\.E\\.|S\\.W\\.",
+    # plain 8-point
+    "NE|NW|SE|SW",
+    # spaced/dotted-ish 8-point
+    "N\\s*\\.?\\s*E\\.?|N\\s*\\.?\\s*W\\.?|S\\s*\\.?\\s*E\\.?|S\\s*\\.?\\s*W\\.?",
+
+   # 32-point "by" compass forms
+"(?:North|South|East|West|N|S|E|W)\\s+by\\s+(?:North|South|East|West|N|S|E|W)",
+"(?:NE|NW|SE|SW|North[-\\s]*East|North[-\\s]*West|South[-\\s]*East|South[-\\s]*West)\\s+by\\s+(?:North|South|East|West|N|S|E|W)",
+
+    
+    # wordy 16-point + 8-point + cardinals
+    "West[-\\s]+North[-\\s]+West",
+    "North[-\\s]*Northeast|North[-\\s]*Northwest|South[-\\s]*Southeast|South[-\\s]*Southwest",
+    "East[-\\s]*Northeast|East[-\\s]*Southeast|West[-\\s]*Northwest|West[-\\s]*Southwest",
+    "North[-\\s]*East|North[-\\s]*West|South[-\\s]*East|South[-\\s]*West",
+    "N(?:orth)?(?:wardly|ward|Easterly|easterly|erly|Westerly|westerly|ly)?",
+    "E(?:ast)?(?:wardly|ward|asternly|asterly|astly|ly)?",
+    "S(?:outh)?(?:wardly|ward|outhernly|outherly|outhly|Easterly|easterly|Westerly|westerly|ly)?",
+    "W(?:est)?(?:wardly|ward|esternly|esterly|estly|ly)?",
+    
+    # North by East
+    "[NSEW]{1,2}\\s+by\\s+[NSEW]",
+    
+    # single letters last
+    "N|E|S|W"
+  ), collapse="|"),
+  ")(?![A-Za-z])"
+)
+
+
+```
+
+## Identify Wind Clause
+
+```{r wind clause regex}
+wind_clause_regex <- regex(
+  "\\bwind\\b(?:(?:[NSEW]\\.)|[^\\n;:.])*\\.?",
+  ignore_case = TRUE
+)
+
+```
+
+
+```{r wind clause and then direction token}
+# Get the wind clause
+extract_wind_clause <- function(x) {
+  str_extract(x, wind_clause_regex)
+}
+
+# -------------------------
+# Extract the direction token with stringr::str_extract()
+# -------------------------
+# Extract wind clause, then pull out the first direction token from it.
+
+extract_first_wind_direction <- function(x) {
+  clause <- str_extract_all(x, wind_clause_regex)
+  clause <- sapply(clause, paste, collapse = " , ")
+  str_extract(clause, dir_token)
+}
+
+```
+
+```{r Extract the clause before wind}
+wind_before_regex_clause <- "(?i)[^\\n;:]*?\\bwind\\b"
+
+# Get the clause before wind
+
+extract_wind_before_clause <- function(x) {
+  str_extract(x, wind_before_regex_clause)
+}
+
+# Get the direction before the wind
+extract_direction_before_wind <- function(x) {
+  clause <- str_extract(x, wind_before_regex_clause)
+  str_extract(clause, dir_token)
+}
+```
+
+```{r extract the second wind direction}
+
+extract_second_wind_direction <- function(x) {
+
+  clause <- str_extract(x, wind_clause_regex)
+
+  tokens <- str_extract_all(clause, dir_token)
+
+  sapply(tokens, function(t) {
+    if (length(t) >= 2) t[2] else NA_character_
+  })
+}
+
+```
+
+
+```{r testing wind}
+
+test_entries <- c(
+  # One wind direction only
+  "Wind N. fresh all day.",
+  "The wind was S.S.W. in the morning. Went to Northeast Harbor in afternoon",
+
+  # Two wind directions
+  "Wind N. shifting to S.S.W. by evening.",
+  "Wind from E.N.E. then W.S.W.",
+  "Wind S.W. veering N.W.",
+
+  # Direction before the word wind
+  "N.E. wind strong with rain.",
+  "S.S.W. wind moderate.",
+
+  # Wind clause with punctuation
+  "Wind N.E.; later S.W. with showers.",
+  "Wind S.S.W., then calm.",
+  "Wind W: afterwards N.N.E.",
+
+  # Multiple sentences
+  "Cloudy in the morning. Wind E. Later S.E.",
+  "Rain. Wind S.S.W. Sea rough. Later wind to East",
+
+  # No second wind direction
+  "Wind N.W. throughout the day. Dinner at Stanley's",
+  "The wind E by N. rain by spells.",
+
+  # No wind direction at all
+  "Rain all day with heavy clouds.",
+  "Calm and foggy.",
+
+  # Lowercase/mixed case
+  "wind n.e. changing to s.w.",
+  "Wind S.s.W. later N.n.E.",
+
+  # Dotted and undotted versions, if you want to support both
+  "Wind SSW then NNE.",
+  "Wind S.S.W. then N.N.E.",
+
+  # Potential false positives
+  "Window open all day; no wind noted.",
+  "The winds were strong but no direction recorded.",
+
+  # East by North variants
+  
+  "Wind N by East",
+  
+  "Wind South by W",
+  
+  # Extra words between directions
+  "Wind N.E. at sunrise, very strong, shifting Southwest at noon.",
+  "Wind first E., afterward gradually S.S.W."
+)
+
+
+test_df <- tibble(
+  id = seq_along(test_entries),
+  category = c(
+    rep("one_direction", 2),
+    rep("two_directions", 3),
+    rep("direction_before_wind", 2),
+    rep("punctuation", 3),
+    rep("multiple_sentences", 2),
+    rep("no_second_direction", 2),
+    rep("no_direction", 2),
+    rep("case_variation", 2),
+    rep("dotted_vs_undotted", 2),
+    rep("false_positive", 2),
+    rep("by_variants", 2),
+    rep("extra_words", 2)
+  ),
+  entry = test_entries
+)
+```
+
+```{r Normalize Wind Direction}
+## Normalize
+
+# compass map
+
+compass_map <- c(
+  # cardinal + common variants
+  north      = "N",
+  northly    = "N",
+  northerly  = "N",
+  northward  = "N",
+  south      = "S",
+  southly    = "S",
+  southerly  = "S",
+  southernly  = "S",  
+  southward  = "S",
+  east       = "E",
+  eastly     = "E",
+  easterly   = "E",
+  easternly  = "E",
+  eastward   = "E",
+  west       = "W",
+  westward   = "W",
+  westerly   = "W",
+
+  # intercardinal words
+  northeast  = "NE",
+  northwest  = "NW",
+  southeast  = "SE",
+  southwest  = "SW",
+  # intercardinal words (variants & misspellings)
+  northeasterly  = "NE",
+  northasterly   = "NE",
+  northeastward  = "NE",
+  northwardeast  = "NE",
+  northe         = "NE",
+
+  northwesterly  = "NW",
+  northwester    = "NW",
+  northwestward  = "NW",
+  northwardwest  = "NW",
+  northw         = "NW",
+
+  southeasterly  = "SE",
+  southasterly   = "SE",
+  southeastward  = "SE",
+  southwardeast  = "SE",
+  southe         = "SE",
+
+  southwesterly  = "SW",
+  southwester    = "SW",
+  southwestward  = "SW",
+  southwardwest  = "SW",
+  southw         = "SW",
+
+  # 16-point words
+  northnortheast = "NNE",
+  eastnortheast  = "ENE",
+  eastsoutheast  = "ESE",
+  southsoutheast = "SSE",
+  southsouthwest = "SSW",
+  westsouthwest  = "WSW",
+  westnorthwest  = "WNW",
+  northnorthwest = "NNW",
+  # 16-point fused-with-ward variants
+  northnortheastward = "NNE",
+  eastnortheastward  = "ENE",
+  eastsoutheastward  = "ESE",
+  southsoutheastward = "SSE",
+  southsouthwestward = "SSW",
+  westsouthwestward  = "WSW",
+  westnorthwestward  = "WNW",
+  northnorthwestward = "NNW",
+  
+  # 32-point "by" compass forms
+  northbyeast        = "NbE",
+  nbye               = "NbE",
+  nbyeast            = "NbE",
+  northbye           = "NbE",
+  nbyeast            = "NbE",
+
+  northeastbynorth   = "NEbN",
+  nebn               = "NEbN",
+  nebyn              = "NEbN",
+  northeastbyn       = "NEbN",
+  nebynorth          = "NEbN",
+
+  northeastbyeast    = "NEbE",
+  nebe               = "NEbE",
+  nebye              = "NEbE",
+  northeastbye       = "NEbE",
+  nebyeast           = "NEbE",
+
+  eastbynorth        = "EbN",
+  ebn                = "EbN",
+  ebyn               = "EbN",
+  eastbyn            = "EbN",
+  ebynorth           = "EbN",
+
+  eastbysouth        = "EbS",
+  ebs                = "EbS",
+  ebys               = "EbS",
+  eastbys            = "EbS",
+  ebysouth           = "EbS",
+
+  southeastbyeast    = "SEbE",
+  sebe               = "SEbE",
+  sebye              = "SEbE",
+  southeastbye       = "SEbE",
+  sebyeast           = "SEbE",
+
+  southeastbysouth   = "SEbS",
+  sebs               = "SEbS",
+  sebys              = "SEbS",
+  southeastbys       = "SEbS",
+  sebysouth          = "SEbS",
+
+  southbyeast        = "SbE",
+  sbe                = "SbE",
+  sbye               = "SbE",
+  southbye           = "SbE",
+  sbyeast            = "SbE",
+
+  southbywest        = "SbW",
+  sbw                = "SbW",
+  sbyw               = "SbW",
+  southbyw           = "SbW",
+  sbywest            = "SbW",
+
+  southwestbysouth   = "SWbS",
+  swbs               = "SWbS",
+  swbys              = "SWbS",
+  southwestbys       = "SWbS",
+  swbysouth          = "SWbS",
+
+  southwestbywest    = "SWbW",
+  swbw               = "SWbW",
+  swbyw              = "SWbW",
+  southwestbyw       = "SWbW",
+  swbywest           = "SWbW",
+
+  westbysouth        = "WbS",
+  wbs                = "WbS",
+  wbys               = "WbS",
+  westbys            = "WbS",
+  wbysouth           = "WbS",
+
+  westbynorth        = "WbN",
+  wbn                = "WbN",
+  wbyn               = "WbN",
+  westbyn            = "WbN",
+  wbynorth           = "WbN",
+
+  northwestbywest    = "NWbW",
+  nwbw               = "NWbW",
+  nwbyw              = "NWbW",
+  northwestbyw       = "NWbW",
+  nwbywest           = "NWbW",
+
+  northwestbynorth   = "NWbN",
+  nwbn               = "NWbN",
+  nwbyn              = "NWbN",
+  northwestbyn       = "NWbN",
+  nwbynorth          = "NWbN",
+
+  northbywest        = "NbW",
+  nbw                = "NbW",
+  nbyw               = "NbW",
+  northbyw           = "NbW",
+  nbywest            = "NbW",
+
+# weird OCR mashups seen in logs
+  wnwest = "WNW",
+  nnew   = "NNE",
+  enes   = "ENE",
+  eses   = "ESE",
+  sseast = "SSE"
+)
+
+normalize_direction <- function(x) {
+  x_clean <- tolower(x)
+  x_clean <- gsub("[^a-z]", "", x_clean)
+
+  abbr <- toupper(x_clean)
+  if (abbr %in% c(
+    "N","S","E","W",
+    "NE","NW","SE","SW",
+    "NNE","ENE","ESE","SSE",
+    "SSW","WSW","WNW","NNW"
+  )) return(abbr)
+
+  if (!is.na(x_clean) && x_clean %in% names(compass_map)) {
+    return(unname(compass_map[[x_clean]]))
+  }
+
+  NA_character_
+}
+
+normalize_direction_vec <- function(x) {
+  vapply(x, normalize_direction, character(1))
+}
+```
+
+
+```{r debug wind}
+debug_wind <- function(x) {
+  clause <- str_extract_all(x, wind_clause_regex)
+  clause <- sapply(clause, paste, collapse = " , ")
+  before_clause <- str_extract(x, wind_before_regex_clause)
+  tokens <- str_extract_all(clause, dir_token)
+  
+  first <- str_extract(clause, dir_token)
+  
+  second <- sapply(tokens, function(t) {
+    if (length(t) >= 2) t[2] else NA_character_
+  })
+  
+  before <- str_extract(before_clause, dir_token)
+
+  wind_dir_token <- coalesce(before, first)
+
+  wind_dir_code_1 = normalize_direction_vec(wind_dir_token)
+  
+  wind_dir_code_2 = normalize_direction_vec(second)
+  
+  data.frame(
+    entry = x,
+    clause = clause,
+    before_clause = before_clause,
+    tokens = sapply(tokens, paste, collapse = " | "),
+    first = first,
+    second = second,
+    before = before,
+    wind_dir_token = wind_dir_token,
+    wind_dir_token_2 = second,
+    wind_dir_code_1 = wind_dir_code_1,
+    wind_dir_code_2 = wind_dir_code_2
+  )
+}
+
+check_wind <- debug_wind(test_df$entry)
+```
+
+
+```{r wind_extraction}
+# -------------------------
+# Extract clause from journal_entry
+journal_data <- journal_data |>
+  mutate(wind_clause = extract_wind_clause(journal_entry),
+         before_wind_clause = extract_wind_before_clause(journal_entry))
+
+# Step B: extract first + second direction tokens from journal_entry
+journal_data <- journal_data |>
+  mutate(wind_dir_token = coalesce(extract_direction_before_wind(journal_entry), extract_first_wind_direction(journal_entry)
+                                   
+  ),
+          wind_dir_token_2 = ifelse(
+  !is.na(extract_first_wind_direction(journal_entry)),
+  extract_second_wind_direction(journal_entry),
+  NA
+  )
+)
+# Normalize to standard codes
+journal_data <- journal_data |>
+  mutate(wind_dir_code_1 = normalize_direction_vec(wind_dir_token),
+        wind_dir_code_2 = normalize_direction_vec(journal_data$wind_dir_token_2))
+
+
+
+wind_data <- journal_data |> 
+  filter(!is.na(wind_mentioned)) |> 
+  select(journal_entry, wind_clause, before_wind_clause, wind_dir_token, wind_dir_code_1, wind_dir_code_2)
+
+
+# Create a dataframe and have someone take a look and check.
+wind_data_2_dir <- wind_data |>
+  filter(!is.na(wind_dir_code_2))
+```
+
+
+```{r check missing wind locations}
+missing_wind <- journal_data |>
+  filter(wind_mentioned == "yes", is.na(wind_dir_code_1)) |>
+  select(date_mdy, journal_entry, wind_mentioned, wind_clause, before_wind_clause, wind_dir_code_1)
+
+write_csv(missing_wind, file = "../data/improve_wind_search.csv")
+```
+
+
+```{r visualize wind location mentions}
+
+journal_data |>
+  ggplot(aes(y = fct_rev(fct_infreq(wind_dir_code_1)))) +
+  geom_bar() +
+  ylab("Wind Direction")
+
+
+```
+
+
+```{r match wind meteor direction}
+
+compass_32_lookup <- tibble::tibble(
+  wind_dir_code = c(
+    "N", "NbE", "NNE", "NEbN", "NE", "NEbE", "ENE", "EbN",
+    "E", "EbS", "ESE", "SEbE", "SE", "SEbS", "SSE", "SbE",
+    "S", "SbW", "SSW", "SWbS", "SW", "SWbW", "WSW", "WbS",
+    "W", "WbN", "WNW", "NWbW", "NW", "NWbN", "NNW", "NbW"
+  ),
+  wind_meteor = seq(0, 348.75, by = 11.25)
+)
+
+journal_data <- journal_data |>
+  left_join(
+    compass_32_lookup,
+    by = c("wind_dir_code_1" = "wind_dir_code")
+  ) |>
+  rename(wind_meteor_1 = wind_meteor) |>
+  left_join(
+    compass_32_lookup,
+    by = c("wind_dir_code_2" = "wind_dir_code")
+  ) |>
+  rename(wind_meteor_2 = wind_meteor)
+
+```
+
+# Wind Direction plots
+
+## Plot of Wind Reporting
+
+```{r}
+wind_month_cat_ts <- journal_data |>
+  filter(year(date_mdy) < 1896) |>
+  mutate(
+    year_month = as.Date(lubridate::floor_date(date_mdy, unit = "month")),
+    wind_category = case_when(
+  is.na(wind_mentioned) ~ "Wind status missing",
+  !is.na(wind_mentioned) & is.na(wind_dir_code_1) ~
+    "Wind mentioned, no direction extracted",
+  !is.na(wind_dir_code_1) ~
+    "Wind direction recorded",
+  TRUE ~ "No wind mentioned"
+)) |>
+  count(year_month, wind_category, name = "n") |>
+  tidyr::complete(
+    year_month = seq(min(year_month, na.rm = TRUE), max(year_month, na.rm = TRUE), by = "month"),
+    wind_category,
+    fill = list(n = 0)
+  )
+```
+
+```{r}
+wind_month_cat_ts_plot <- ggplot(
+  wind_month_cat_ts,
+  aes(x = year_month, y = n, fill = wind_category)
+) +
+  geom_col() +
+  scale_x_date(
+    date_breaks = "5 years",
+    date_labels = "%Y"
+  ) +
+  labs(
+    title = "Wind Reporting Over Time",
+    subtitle = "Monthly journal entries by wind-reporting category",
+    x = "Date",
+    y = "Number of journal entries",
+    fill = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    legend.box = "horizontal"
+  ) +
+  scale_fill_viridis_d()
+
+wind_month_cat_ts_plot
+```
+
+```{r}
+ggsave(
+  filename = "../figures/wind_month_category_timeseries.png",
+  plot = wind_month_cat_ts_plot,
+  width = 12,
+  height = 5,
+  dpi = 300
+)
+```
+
+
+```{r Create Monthly Year Wind}
+
+monthly_year_wind <- journal_data |>
+  filter(year(date_mdy) < max(journal_year) & year(date_mdy) > 1872) |>
+  filter(!is.na(wind_mentioned)) |>
+  mutate(
+    year_month = floor_date(date_mdy, unit = "month"),
+    year = year(date_mdy),
+    month = month(date_mdy)
+  ) |>
+  count(year_month, year, month, wind_dir_code_1) |>
+  group_by(month, year) |>
+  mutate(prop = n / sum(n)) |>
+  ungroup() |>
+  mutate(
+    highlight = case_when(
+      !wind_dir_code_1 %in% c("S", "N", "NW", "E", "W") ~ "Other",
+      TRUE ~ wind_dir_code_1
+    )
+  )
+
+```
+
+
+
+```{r Wind Reporting}
+
+monthly_n_reporting <- monthly_year_wind |>
+  group_by(year, month) |>
+  summarise(
+    total_n = sum(n),
+    .groups = "drop"
+  ) 
+
+low_n_years <- monthly_n_reporting |>
+  filter(total_n < 20)
+
+month_n_trend <- ggplot(
+  monthly_n_reporting,
+  aes(x = factor(month, levels = 1:12, labels = month.abb),
+      y = total_n)
+) +
+  geom_boxplot(fill = "grey90", outlier.shape = NA) +
+  geom_jitter(
+    width = 0.15,
+    alpha = 0.5,
+    size = 1.5
+  ) +
+  geom_text_repel(
+    data = low_n_years,
+    aes(label = year),
+    size = 3,
+    max.overlaps = Inf
+  ) +
+  labs(
+    title = "Monthly Frequency of Wind Direction Reports",
+    subtitle = "Boxes show quartiles; points show individual years",
+    x = "Month",
+    y = "Number of wind direction reports"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) + 
+  ylim(0, 32)
+
+month_n_trend
+
+ggsave(
+  filename = "../figures/month_n_trend.png",
+  plot = month_n_trend,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+
+```
+
+
+## Filter out dates outside GOM
+
+
+```{r Remove dates outside GOM}
+journal_data <- journal_data |>
+    filter(
+    !(
+      date_mdy >= as.Date("1875-11-24") & # Jersey City to Italy to Haiti/Cuba and back to New York City
+      date_mdy <= as.Date("1876-07-17") 
+    ),
+    !(
+      date_mdy >= as.Date("1886-05-12") & # Travel to Philadelphia, Gloucester City and Chester.
+      date_mdy <= as.Date("1886-06-04")
+    )
+  ) # Filter out trips to Italy and Haiti/Cuba
+```
+
+
+## How often does wind come from each direction? 
+
+```{r wind direction frequency}
+
+wind_plot <- journal_data |>
+  filter(!is.na(wind_dir_code_1)) |>   
+  count(wind_dir_code_1) |>
+  mutate(
+    prop = n / sum(n)
+  ) |>
+  arrange(desc(prop)) |>
+  mutate(
+    top4 = row_number() <= 4
+  ) |>
+  ggplot(
+    aes(
+      x = fct_reorder(wind_dir_code_1, prop),
+      y = prop,
+      fill = top4
+    )
+  ) +
+  geom_col(width = 0.75) +
+  geom_text(aes(label = n), vjust = -0.3, size = 3) +
+  scale_fill_manual(
+    values = c("TRUE" = "steelblue", "FALSE" = "grey70"),
+    guide = "none"
+  ) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(
+    title = "Relative Frequency of Wind by Direction",
+    subtitle = "Proportion of total observations",
+    x = "Wind direction",
+    y = "Proportion of observations"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  ) +
+  coord_flip()
+
+wind_plot
+
+ggsave(
+  filename = "../figures/wind_direction_relative_frequency.png",
+  plot = wind_plot,
+  width = 8,
+  height = 6,
+  dpi = 300
+)
+
+
+
+```
+
+## 32 point compass rose
+
+```{r 32 monthly wind heat map polar}
+
+
+month_levels <- c(
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+)
+
+directions <- c(
+  "N", "NbE", "NNE", "NEbN",
+  "NE", "NEbE", "ENE", "EbN",
+  "E", "EbS", "ESE", "SEbE",
+  "SE", "SEbS", "SSE", "SbE",
+  "S", "SbW", "SSW", "SWbS",
+  "SW", "SWbW", "WSW", "WbS",
+  "W", "WbN", "WNW", "NWbW",
+  "NW", "NWbN", "NNW", "NbW"
+)
+
+monthly_wind_32_heatmap <- journal_data |>
+  mutate(
+    month = factor(month, levels = month_levels),
+    wind_dir_code_1 = factor(wind_dir_code_1, levels = directions)
+  ) |>
+  count(month, wind_dir_code_1) |>
+  complete(month, wind_dir_code_1, fill = list(n = 0)) |>
+  group_by(month) |>
+  mutate(
+    prop = n / sum(n),
+    n_fill = if_else(n == 0, NA_real_, as.numeric(n))
+  ) |>
+  ungroup() |>
+  filter(!is.na(wind_dir_code_1))
+
+polar_32_heatmap <- ggplot(monthly_wind_32_heatmap, aes(wind_dir_code_1, month, fill = n_fill)) +
+  geom_tile(color = "grey80") +
+  scale_fill_gradient(
+    low = "lightblue",
+    high = "navy",
+    na.value = "white",
+    name = "Count"
+  ) +
+  scale_y_discrete(limits = rev(month_levels)) +
+  labs(
+    title = "Wind Direction Counts by Month",
+    x = "Wind Direction",
+    y = "Month"
+  ) +
+  coord_polar(
+  theta = "x",
+  start = pi / 32 - pi/16,
+  direction = -1
+) +
+  theme_minimal(base_size = 18) +
+  theme(
+    plot.title = element_text(size = 24, face = "bold", hjust = 0.5),
+    axis.title = element_text(size = 20),
+    axis.text.x = element_text(size = 16, face = "bold"),
+    axis.text.y = element_text(size = 16),
+    legend.title = element_text(size = 18),
+    legend.text = element_text(size = 16)
+  )
+
+ggsave(
+  filename = "../figures/monthly_wind_direction_polar_32_heatmap.png",
+  plot = polar_32_heatmap,
+  width = 14,
+  height = 14,
+  units = "in",
+  dpi = 300
+)
+```
+
+
+## Median count number of mentions per month
+
+```{r median-by-month}
+monthly_wind_heatmap <- journal_data |>
+  mutate(
+    month = factor(month, levels = month_levels),
+    year = year(date_mdy),
+    wind_dir_code_1 = factor(wind_dir_code_1, levels = directions)
+  ) |>
+  filter(!is.na(wind_dir_code_1), !is.na(year)) |>
+  count(year, month, wind_dir_code_1, name = "n") |>
+  complete(
+    year,
+    month,
+    wind_dir_code_1,
+    fill = list(n = 0)
+  ) |>
+  group_by(month, wind_dir_code_1) |>
+  summarise(
+    median_n = median(n, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  mutate(
+    median_fill = if_else(median_n == 0, NA_real_, as.numeric(median_n))
+  )
+```
+
+```{r median wind 32 point}
+polar_32_med_heatmap <- ggplot(
+  monthly_wind_heatmap,
+  aes(wind_dir_code_1, month, fill = median_fill)
+) +
+  geom_tile(color = "grey80") +
+  scale_fill_gradient(
+    low = "lightblue",
+    high = "navy",
+    na.value = "white",
+    name = "Median count"
+  ) +
+  scale_y_discrete(limits = rev(month_levels)) +
+  labs(
+    title = "Median Wind Direction Counts by Month",
+    x = "Wind Direction",
+    y = "Month"
+  ) +
+  coord_polar(theta = "x", start = -pi / 32, direction = -1)
+
+ggsave(
+  filename = "../figures/monthly_median_wind_direction_polar_32_heatmap.png",
+  plot = polar_32_med_heatmap,
+  width = 14,
+  height = 14,
+  units = "in",
+  dpi = 300
+)
+
+```
+
+
+## When were fine scale wind directions reported?
+
+```{r fine-scale wind}
+compass_16 <- c(
+  "N", "NNE", "NE", "ENE",
+  "E", "ESE", "SE", "SSE",
+  "S", "SSW", "SW", "WSW",
+  "W", "WNW", "NW", "NNW"
+)
+
+fine_scale_winds <- journal_data |>
+  filter(
+    !is.na(wind_dir_code_1),
+    wind_dir_code_1 %in% setdiff(compass_32_lookup$wind_dir_code, compass_16)
+  ) |>
+  arrange(date_mdy) |>
+  select(date_mdy, journal_year, wind_dir_code_1, journal_entry)
+
+wind_precision_plot <- fine_scale_winds |>
+  count(journal_year) |>
+  tidyr::complete(
+    journal_year = full_seq(journal_year, 1),
+    fill = list(n = 0)
+  ) |>
+  ggplot(aes(x = journal_year, y = n)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  scale_x_continuous(
+    breaks = seq(1870, 1905, by = 5)
+  ) +
+  labs(
+    title = "Use of Fine-Scale Wind Directions Over Time",
+    subtitle = "Counts of 32-point compass directions (e.g., SbW, EbN, NWbN)",
+    x = "Year",
+    y = "Number of observations"
+  ) +
+  theme_minimal(base_size = 12)
+
+
+ggsave(
+  filename = "../figures/wind_precision_plot.png",
+  plot = wind_precision_plot,
+  width = 8,
+  height = 5,
+  units = "in",
+  dpi = 300
+)
+```
+
+
+```{r frequency of wind direction by month}
+top_dirs <- journal_data |>
+  filter(!is.na(wind_dir_code_1)) |>
+  count(wind_dir_code_1, sort = TRUE) |>
+  slice_head(n = 8) |>
+  pull(wind_dir_code_1)
+
+monthly_wind <- journal_data |>
+  filter(wind_dir_code_1 %in% top_dirs) |>
+  count(month, wind_dir_code_1) |>
+  group_by(month) |>
+  mutate(prop = n / sum(n)) |>
+  ungroup() |>
+  mutate(
+    month_abbr = month(
+      match(
+        month,
+        month.name
+      ),
+      label = TRUE,
+      abbr = TRUE
+    ),
+    highlight = case_when(!wind_dir_code_1 %in% c("S", "N", "NW", "E", "W") ~ "Other",
+                          TRUE ~ wind_dir_code_1)
+  )
+
+wind_heatmap <- ggplot(
+  monthly_wind,
+  aes(
+    x = month_abbr,
+    y = fct_reorder(wind_dir_code_1, prop, .fun = max),
+    fill = prop
+  )
+) +
+  geom_tile(color = "white") +
+  scale_fill_viridis_c(labels = scales::percent_format()) +
+  labs(
+    title = "Seasonal Trends in Wind Direction",
+    subtitle = "Relative frequency within month",
+    x = "Month",
+    y = "Wind direction",
+    fill = "Proportion"
+  ) +
+  theme_minimal(base_size = 12)
+
+ggsave(
+  filename = "../figures/wind_direction_monthly_heat_map.png",
+  plot = wind_heatmap,
+  width = 8,
+  height = 6,
+  dpi = 300
+)
+
+
+```
+
+```{r monthly wind heat map polar}
+
+
+month_levels <- c(
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+)
+
+directions <- c(
+  "N","NNE","NE","ENE","E","ESE","SE","SSE",
+  "S","SSW","SW","WSW","W","WNW","NW","NNW"
+)
+
+monthly_wind_heatmap <- journal_data |>
+  mutate(
+    month = factor(month, levels = month_levels),
+    wind_dir_code_1 = factor(wind_dir_code_1, levels = directions)
+  ) |>
+  count(month, wind_dir_code_1) |>
+  complete(month, wind_dir_code_1, fill = list(n = 0)) |>
+  group_by(month) |>
+  mutate(
+    prop = n / sum(n),
+    n_fill = if_else(n == 0, NA_real_, as.numeric(n))
+  ) |>
+  ungroup() |>
+  filter(!is.na(wind_dir_code_1))
+
+polar_heatmap <- ggplot(monthly_wind_heatmap, aes(wind_dir_code_1, month, fill = n_fill)) +
+  geom_tile(color = "grey80") +
+  scale_fill_gradient(
+    low = "lightblue",
+    high = "navy",
+    na.value = "white",
+    name = "Count"
+  ) +
+  scale_y_discrete(limits = rev(month_levels)) +
+  labs(
+    title = "Wind Direction Counts by Month",
+    x = "Wind Direction",
+    y = "Month"
+  ) +
+  coord_polar(theta = "x", start = 29 * pi / 15, direction = -1) +
+  theme_minimal(base_size = 18) +
+  theme(
+    plot.title = element_text(size = 24, face = "bold", hjust = 0.5),
+    axis.title = element_text(size = 20),
+    axis.text.x = element_text(size = 16, face = "bold"),
+    axis.text.y = element_text(size = 16),
+    legend.title = element_text(size = 18),
+    legend.text = element_text(size = 16)
+  )
+
+ggsave(
+  filename = "../figures/monthly_wind_direction_polar_heatmap.png",
+  plot = polar_heatmap,
+  width = 10,
+  height = 10,
+  units = "in",
+  dpi = 300
+)
+```
+
+
+## heatmap median 16 point
+
+```{r median wind 16 point}
+
+directions_16 <- c(
+  "N","NNE","NE","ENE",
+  "E","ESE","SE","SSE",
+  "S","SSW","SW","WSW",
+  "W","WNW","NW","NNW"
+)
+
+monthly_wind_16_heatmap <- journal_data |>
+  mutate(
+    month = factor(month, levels = month_levels),
+    year = year(date_mdy),
+
+    wind_dir_16 = case_when(
+      wind_dir_code_1 %in% c("N", "NbE", "NbW") ~ "N",
+      wind_dir_code_1 %in% c("NNE") ~ "NNE",
+      wind_dir_code_1 %in% c("NE", "NEbN", "NEbE") ~ "NE",
+      wind_dir_code_1 %in% c("ENE", "EbN") ~ "ENE",
+      wind_dir_code_1 %in% c("E", "EbS") ~ "E",
+      wind_dir_code_1 %in% c("ESE", "SEbE") ~ "ESE",
+      wind_dir_code_1 %in% c("SE", "SEbS") ~ "SE",
+      wind_dir_code_1 %in% c("SSE", "SbE") ~ "SSE",
+      wind_dir_code_1 %in% c("S", "SbW") ~ "S",
+      wind_dir_code_1 %in% c("SSW", "SWbS") ~ "SSW",
+      wind_dir_code_1 %in% c("SW", "SWbW") ~ "SW",
+      wind_dir_code_1 %in% c("WSW", "WbS") ~ "WSW",
+      wind_dir_code_1 %in% c("W", "WbN") ~ "W",
+      wind_dir_code_1 %in% c("WNW", "NWbW") ~ "WNW",
+      wind_dir_code_1 %in% c("NW", "NWbN") ~ "NW",
+      wind_dir_code_1 %in% c("NNW") ~ "NNW",
+      TRUE ~ NA_character_
+    ),
+
+    wind_dir_16 = factor(wind_dir_16, levels = directions_16)
+  ) |>
+  filter(!is.na(wind_dir_16), !is.na(year)) |>
+  count(year, month, wind_dir_16, name = "n") |>
+  complete(
+    year,
+    month,
+    wind_dir_16,
+    fill = list(n = 0)
+  ) |>
+  group_by(month, wind_dir_16) |>
+  summarise(
+    median_n = median(n),
+    .groups = "drop"
+  ) |>
+  mutate(
+    median_fill = if_else(median_n == 0, NA_real_, median_n)
+  )
+
+polar_16_med_heatmap <- ggplot(
+  monthly_wind_heatmap,
+  aes(wind_dir_16, month, fill = median_fill)
+) +
+  geom_tile(color = "grey80") +
+  scale_fill_gradient(
+    low = "lightblue",
+    high = "navy",
+    na.value = "white",
+    name = "Median count"
+  ) +
+  scale_y_discrete(limits = rev(month_levels)) +
+  labs(
+    title = "Median Wind Direction Counts by Month",
+    x = "Wind Direction",
+    y = "Month"
+  ) +
+  coord_polar(
+    theta = "x",
+    start = -pi / 16,
+    direction = -1
+  )  +
+  theme_minimal(base_size = 18) +
+  theme(
+    plot.title = element_text(size = 24, face = "bold", hjust = 0.5),
+    axis.title = element_text(size = 20),
+    axis.text.x = element_text(size = 16, face = "bold"),
+    axis.text.y = element_text(size = 16),
+    legend.title = element_text(size = 18),
+    legend.text = element_text(size = 16)
+  )
+
+ggsave(
+  filename = "../figures/polar_16_med_heatmap.png",
+  plot = polar_16_med_heatmap,
+  width = 14,
+  height = 14,
+  dpi = 300
+)
+
+```
+
+
+```{r monthly wind line plot}
+
+month_ts <- ggplot(
+  monthly_wind,
+  aes(
+    x = month_abbr,
+    y = prop,
+    color = fct_reorder(highlight, desc(prop)),
+    group = wind_dir_code_1
+  )
+) +
+  geom_line(
+    aes(
+      linewidth = highlight == "Other"
+    ),
+    alpha = 0.9
+  ) +
+  scale_linewidth_manual(
+    values = c(
+      "TRUE" = 1,
+      "FALSE" = 1.5
+    ),
+    guide = "none"
+  ) +
+  scale_color_manual(
+    values = c(
+      "N" = "#440154FF",
+      "NW" = "#21908CFF",
+      "S" = "#FDE725FF",
+      "Other" = "grey75"
+    )
+  ) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(
+    title = "Monthly Wind Direction Trends",
+    x = "Month",
+    y = "Proportion of observations",
+    color = "Direction"
+  ) +
+  theme_minimal(base_size = 12)
+
+
+ggsave(
+  filename = "../figures/monthly_wind_S_N_NW_E_highlighted.png",
+  plot = month_ts,
+  width = 8,
+  height = 6,
+  dpi = 300
+)
+
+```
+
+```{r month and year wind line plot}
+
+month_year_ts <- ggplot(
+  monthly_year_wind,
+  aes(
+    x = month,
+    y = prop,
+    color = highlight,
+    group = wind_dir_code_1
+  )
+) +
+  geom_line(
+    aes(linewidth = highlight == "Other"),
+    alpha = 0.9
+  ) +
+  scale_linewidth_manual(
+    values = c(
+      "TRUE" = 1,
+      "FALSE" = 1.5
+    ),
+    guide = "none"
+  ) +
+  scale_color_manual(
+    values = c(
+      "N" = "#440154FF",
+      "NW" = "#21908CFF",
+      "S" = "#FDE725FF",
+      "E" = "#5DC863FF",
+      "W" = "#555154FF",
+      "Other" = "grey75"
+    )
+  ) +
+  scale_y_continuous(labels = scales::percent_format(), limits = c(0, 0.75)) +
+  labs(
+    title = "Monthly Wind Direction Trends Over Time",
+    x = "",
+    y = "Proportion of observations",
+    color = "Direction"
+  ) +
+  scale_x_continuous(
+  breaks = 1:12,
+  labels = month.abb
+) +
+  theme_minimal(base_size = 12) +
+  facet_wrap(~year, ncol = 4)  +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) 
+
+month_year_ts
+
+ggsave(
+  filename = "../figures/monthly_wind_trends_wout_1872.png",
+  plot = month_year_ts,
+  width = 12,
+  height = 8,
+  dpi = 300
+)
+```
+
+```{r monthly summary plot}
+monthly_summary <- monthly_year_wind |>
+  group_by(month, highlight) |>
+  summarise(
+    median_prop = median(prop, na.rm = TRUE),
+    q25 = quantile(prop, 0.25, na.rm = TRUE),
+    q75 = quantile(prop, 0.75, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  filter(highlight != "Other")
+
+month_summary_trend <- ggplot(monthly_summary, aes(x = month, y = median_prop, color = highlight, fill = highlight)) +
+  geom_ribbon(
+    aes(ymin = q25, ymax = q75),
+    alpha = 0.18,
+    color = NA
+  ) +
+  geom_line(linewidth = 1.2) +
+  scale_x_continuous(
+    breaks = 1:12,
+    labels = month.abb
+  ) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(
+    title = "Typical Monthly Wind Direction Pattern",
+    subtitle = "Line shows median monthly proportion \nRibbon shows interquartile range across years",
+    x = "Month",
+    y = "Proportion of observations",
+    color = "Direction",
+    fill = "Direction"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  scale_fill_manual(
+    values = c(
+      "N" = "#440154FF",
+      "NW" = "#21908CFF",
+      "S" = "#FDE725FF",
+      "E" = "#5DC863FF",
+      "W" = "#555154FF",
+      "Other" = "grey75"
+    )
+  ) +
+  scale_color_manual(
+    values = c(
+      "N" = "#440154FF",
+      "NW" = "#21908CFF",
+      "S" = "#FDE725FF",
+      "E" = "#5DC863FF",
+      "W" = "#555154FF",
+      "Other" = "grey75"
+    )
+  ) 
+
+ggsave(
+  filename = "../figures/month_summary_trend.png",
+  plot = month_summary_trend,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+
+```
+
+
+
+
+
+```{r monthly wind polar plot}
+
+polar_seasonal_plot <- monthly_wind |>
+  filter(wind_dir_code_1 != "S") |>
+  ggplot(
+  aes(
+    x = month_abbr,
+    y = prop,
+    group = wind_dir_code_1,
+    color = highlight
+  )
+) +
+  geom_line(
+    aes(linewidth = highlight == "Other"),
+    alpha = 0.9
+  ) +
+  geom_point(
+    aes(size = highlight != "Other"),
+    alpha = 0.9
+  ) +
+  scale_linewidth_manual(
+    values = c(
+      "TRUE" = 0.4,
+      "FALSE" = 1.4
+    ),
+    guide = "none"
+  ) +
+  scale_size_manual(
+    values = c(
+      "TRUE" = 2.2,
+      "FALSE" = 1
+    ),
+    guide = "none"
+  ) +
+  scale_color_manual(
+    values = c(
+      "N" = "#440154FF",
+      "NW" = "#21908CFF",
+      "E" = "#FDE725FF",
+      "Other" = "grey75"
+    )
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format()
+  ) +
+  labs(
+    title = "Seasonal Pattern in Wind Direction",
+    subtitle = "Monthly relative frequency among top wind directions excluding S",
+    x = NULL,
+    y = "Proportion of observations",
+    color = "Direction"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.minor = element_blank(),
+    axis.text.y = element_text(size = 8, color = "grey40"),
+    axis.text.x = element_text(color = "black", face = "bold"),
+    axis.title.y = element_blank(),
+    plot.title = element_text(face = "bold")
+  ) +
+  coord_polar()
+
+polar_seasonal_plot
+
+ggsave(
+  filename = "../figures/monthly_wind_direction_polar.png",
+  plot = polar_seasonal_plot,
+  width = 7,
+  height = 7,
+  dpi = 300
+)
+
+```
+
+```{r frequency of wind by direction}
+
+journal_data |>
+  filter(!is.na(wind_dir_code_1)) |>   # drop NA rows
+  count(wind_dir_code_1) |>
+  ggplot(aes(x = wind_dir_code_1, y = n)) +
+  geom_col(width = 0.75) +
+  geom_text(aes(label = n), vjust = -0.3, size = 3) +
+   scale_x_discrete(
+    limits = c( "N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW")
+  ) +
+  labs(
+    title = "Frequency of Wind by Direction",
+    subtitle = "All observations",
+    x = "Wind direction",
+    y = "Number of observations"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  ) + 
+  coord_polar()
+
+```
+
+```{r frequency of wind by direction polar 32}
+
+journal_data |>
+  filter(!is.na(wind_dir_code_1)) |>   # drop NA rows
+  count(wind_dir_code_1) |>
+  ggplot(aes(x = wind_dir_code_1, y = n)) +
+  geom_col(width = 0.75) +
+  geom_text(aes(label = n), vjust = -0.3, size = 3) +
+   scale_x_discrete(
+    limits = c("N", "NbE", "NNE", "NEbN", "NE", "NEbE", "ENE", "EbN",
+    "E", "EbS", "ESE", "SEbE", "SE", "SEbS", "SSE", "SbE",
+    "S", "SbW", "SSW", "SWbS", "SW", "SWbW", "WSW", "WbS",
+    "W", "WbN", "WNW", "NWbW", "NW", "NWbN", "NNW", "NbW")
+  ) +
+  labs(
+    title = "Frequency of Wind by Direction",
+    subtitle = "All observations",
+    x = "Wind direction",
+    y = "Number of observations"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  ) + 
+  coord_polar()
+
+```
+
+```{r polar all directions}
+polar_plot <- journal_data |>
+  mutate(
+    wind_dir_simple = case_when(
+      wind_dir_code_1 %in% c("NbE", "NbW") ~ "N",
+      wind_dir_code_1 %in% c("NEbN", "NEbE") ~ "NE",
+      wind_dir_code_1 %in% c("EbN", "EbS") ~ "E",
+      wind_dir_code_1 %in% c("SEbE", "SEbS") ~ "SE",
+      wind_dir_code_1 %in% c("SbE", "SbW") ~ "S",
+      wind_dir_code_1 %in% c("SWbS", "SWbW") ~ "SW",
+      wind_dir_code_1 %in% c("WbN", "WbS") ~ "W",
+      wind_dir_code_1 %in% c("NWbW", "NWbN") ~ "NW",
+      TRUE ~ wind_dir_code_1
+    ),
+    wind_dir_simple = factor(wind_dir_simple, levels = dir_levels_simple)
+  ) |>
+  filter(!is.na(wind_dir_simple)) |>
+  count(wind_dir_simple) |>
+  mutate(
+    label_n = if_else(n > 100, as.character(n), "")
+  ) |>
+  ggplot(aes(x = wind_dir_simple, y = sqrt(n))) +
+  geom_col(width = 0.75) +
+  geom_text(
+    aes(y = sqrt(n) + max(sqrt(n), na.rm = TRUE)*0.04,
+        label = label_n),
+    vjust = -0.3,
+    size = 3
+  ) +
+  scale_x_discrete(
+    limits = dir_levels_simple,
+    labels = dir_labels_simple,
+    drop = FALSE
+  ) +
+  labs(
+    title = "Frequency of Wind by Direction",
+    subtitle = "Square-root scaled counts; labels show raw counts above 50",
+    x = "",
+    y = ""
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text.x = ggtext::element_markdown(color = "black"),
+    axis.text.y = element_blank(),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  ) +
+  coord_polar() 
+
+polar_plot
+
+ggsave(
+  filename = "../figures/wind_direction_all_polar.png",
+  plot = polar_plot,
+  width = 7,
+  height = 7,
+  dpi = 300
+)
+```
+
+
+```{r frequency of wind by direction 2}
+journal_data |>
+  filter(!is.na(wind_dir_code_2)) |>
+  count(wind_dir_code_2) |>
+  ggplot(aes(x = wind_dir_code_2, y = n)) +
+  geom_col(width = 0.75) +
+  geom_text(aes(label = n), vjust = -0.3, size = 3) +
+  scale_x_discrete(
+    limits = c( "N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW")
+  ) +
+  labs(
+    title = "Frequency of Wind by Direction",
+    subtitle = "All observations",
+    x = "Wind direction",
+    y = "Number of observations"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(color = "black"),
+    axis.text.y = element_blank(),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  ) +
+  coord_polar()
+
+```
+
+```{r wind-shift}
+directions_16_na <- c(
+  "N","NNE","NE","ENE","E","ESE","SE","SSE",
+  "S","SSW","SW","WSW","W","WNW","NW","NNW"#,
+  #"No Second Wind"
+)
+
+wind_shift <- journal_data |>
+  filter(
+    !is.na(wind_dir_code_1),
+    !is.na(wind_dir_code_2)
+  ) |>
+  mutate(
+    wind_dir_code_1 = factor(
+      wind_dir_code_1,
+      levels = directions_16
+    ),
+  #  wind_dir_code_2 = case_when(
+  #    is.na(wind_dir_code_2) ~ "No Second Wind",
+  #    TRUE ~ wind_dir_code_2
+  #  ),
+    wind_dir_code_2 = factor(
+      wind_dir_code_2,
+      levels = directions_16_na
+    )
+  ) |>
+  filter(!is.na(wind_dir_code_1)) |>
+  count(wind_dir_code_1, wind_dir_code_2, name = "n") |>
+  complete(
+    wind_dir_code_1,
+    wind_dir_code_2,
+    fill = list(n = 0)
+  )
+
+ggplot(wind_shift, aes(x = fct_rev(wind_dir_code_1), y = wind_dir_code_2, fill = n)) +
+  geom_tile(color = "white") +
+  geom_text(
+    aes(label = if_else(n > 0, as.character(n), "")),
+    size = 3
+  ) +
+  scale_fill_gradient(
+    low = "lightblue",
+    high = "navy",
+    name = "Count"
+  ) +
+  labs(
+    title = "Wind Direction Shifts",
+    subtitle = "From first recorded direction to second recorded direction",
+    x = "First wind direction",
+    y = "Second wind direction"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  ) +
+  coord_flip()
+
+
+```
+
+
+## Transitions
+
+```{r top shifts}
+directions_16 <- c(
+  "N","NNE","NE","ENE","E","ESE","SE","SSE",
+  "S","SSW","SW","WSW","W","WNW","NW","NNW"
+)
+
+# Count transitions by month
+wind_shifts_ts <- journal_data |>
+  filter(
+    !is.na(wind_dir_code_1),
+    !is.na(wind_dir_code_2)
+  ) |>
+  mutate(
+    year_month = floor_date(date_mdy, "month"),
+    month = month(date_mdy),
+    shift = paste(wind_dir_code_1, "\u2192", wind_dir_code_2)
+  ) |>
+  count(year_month, month, shift, name = "n")
+
+# Top 6 transitions overall
+top_shifts <- wind_shifts_ts |>
+  group_by(shift) |>
+  summarise(total_n = sum(n), .groups = "drop") |>
+  slice_max(total_n, n = 6) |>
+  pull(shift)
+
+# Keep only top 6 and fill missing months
+wind_shifts_top6 <- wind_shifts_ts |>
+  filter(shift %in% top_shifts) |>
+  tidyr::complete(
+    year_month = seq(
+      min(year_month),
+      max(year_month),
+      by = "month"
+    ),
+    shift,
+    fill = list(n = 0)
+  )
+
+wind_shifts_top6_month <- wind_shifts_ts |>
+  summarize(total_month = sum(n, na.rm = TRUE)) |>
+  tidyr::complete(
+    month = seq(
+      min(month),
+      max(month),
+      by = "month"
+    ),
+    shift,
+    fill = list(n = 0)
+  )
+```
+
+```{r top shifts plot year and month}
+
+directions_16 <- c(
+  "N", "NNE", "NE", "ENE",
+  "E", "ESE", "SE", "SSE",
+  "S", "SSW", "SW", "WSW",
+  "W", "WNW", "NW", "NNW"
+)
+
+# Create all recorded wind shifts
+wind_shifts_all <- journal_data |>
+  filter(
+    !is.na(wind_dir_code_1),
+    !is.na(wind_dir_code_2)
+  ) |>
+  mutate(
+    year_month = floor_date(date_mdy, "month"),
+    wind_dir_code_1 = factor(wind_dir_code_1, levels = directions_16),
+    wind_dir_code_2 = factor(wind_dir_code_2, levels = directions_16)
+  ) |>
+  filter(
+    !is.na(wind_dir_code_1),
+    !is.na(wind_dir_code_2)
+  ) |>
+  mutate(
+    shift = paste(wind_dir_code_1, "\u2192", wind_dir_code_2)
+  )
+
+# Count each shift by month
+monthly_shift_counts <- wind_shifts_all |>
+  count(year_month, shift, name = "n")
+
+# Count all recorded wind shifts by month
+monthly_total_shifts <- wind_shifts_all |>
+  count(year_month, name = "total_shifts")
+
+# Identify the top 6 shifts overall
+top_shifts <- monthly_shift_counts |>
+  group_by(shift) |>
+  summarise(
+    total_n = sum(n),
+    .groups = "drop"
+  ) |>
+  slice_max(total_n, n = 6) |>
+  pull(shift)
+
+# Keep top 6 shifts and calculate monthly proportion
+wind_shifts_top6_prop <- monthly_shift_counts |>
+  filter(shift %in% top_shifts) |>
+  complete(
+    year_month = seq(
+      min(year_month, na.rm = TRUE),
+      max(year_month, na.rm = TRUE),
+      by = "month"
+    ),
+    shift = top_shifts,
+    fill = list(n = 0)
+  ) |>
+  left_join(monthly_total_shifts, by = "year_month") |>
+  mutate(
+    prop = n / total_shifts
+  )
+
+# plot
+shift_heatmap <- ggplot(
+  wind_shifts_top6_prop,
+  aes(
+    x = year_month,
+    y = forcats::fct_reorder(shift, n, .fun = sum),
+    fill = prop
+  )
+) +
+  geom_tile() +
+  scale_fill_viridis_c(
+    option = "C",
+    labels = scales::percent_format(accuracy = 1),
+    na.value = "white",
+    name = "Proportion\nof shifts"
+  ) +
+  labs(
+    title = "Most Common Wind Direction Shifts Through Time",
+    subtitle = "Monthly proportion of all recorded wind shifts represented by the top 6 transitions",
+    x = NULL,
+    y = "Wind direction shift"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "bottom",
+    panel.grid = element_blank(),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+shift_heatmap
+
+
+ggsave(
+  filename = "../figures/top6_wind_shift_monthly_relative_frequency_heatmap.png",
+  plot = shift_heatmap,
+  width = 12,
+  height = 7,
+  units = "in",
+  dpi = 300
+)
+```
+
+```{r top shifts plot by month}
+library(tidyverse)
+library(lubridate)
+library(ggridges)
+
+directions_16 <- c(
+  "N", "NNE", "NE", "ENE",
+  "E", "ESE", "SE", "SSE",
+  "S", "SSW", "SW", "WSW",
+  "W", "WNW", "NW", "NNW"
+)
+
+wind_shifts_all <- journal_data |>
+  filter(
+    !is.na(wind_dir_code_1),
+    !is.na(wind_dir_code_2)
+  ) |>
+  mutate(
+    month_num = month(date_mdy),
+    wind_dir_code_1 = factor(wind_dir_code_1, levels = directions_16),
+    wind_dir_code_2 = factor(wind_dir_code_2, levels = directions_16)
+  ) |>
+  filter(
+    !is.na(wind_dir_code_1),
+    !is.na(wind_dir_code_2),
+    !is.na(month_num)
+  ) |>
+  mutate(
+    shift = paste(wind_dir_code_1, "\u2192", wind_dir_code_2)
+  )
+
+top_shifts <- wind_shifts_all |>
+  count(shift, sort = TRUE) |>
+  filter(n >= 75) |>
+  pull(shift)
+
+wind_shifts_density <- wind_shifts_all |>
+  filter(shift %in% top_shifts) |>
+  mutate(
+    shift = forcats::fct_reorder(shift, month_num, .fun = median)
+  )
+
+shift_density_plot <- ggplot(
+  wind_shifts_density,
+  aes(
+    x = month_num,
+    y = shift,
+    fill = shift
+  )
+) +
+  geom_density_ridges(
+    alpha = 0.75,
+    scale = 1.4,
+    color = "white",
+    linewidth = 0.3
+  ) +
+  scale_x_continuous(
+    breaks = 1:12,
+    labels = month.abb,
+    limits = c(1, 12)
+  ) +
+  labs(
+    title = "Seasonal Timing of Common Wind Direction Shifts",
+    subtitle = "Density of observed shifts by month for the top 6 transitions",
+    x = "Month",
+    y = "Wind direction shift",
+    fill = "Shift"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "none",
+    panel.grid.minor = element_blank(),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
+
+shift_density_plot
+
+ggsave(
+  filename = "../figures/top6_wind_shift_seasonal_density.png",
+  plot = shift_density_plot,
+  width = 10,
+  height = 7,
+  units = "in",
+  dpi = 300
+)
+```
+
+```{r tile shifts}
+
+wind_shifts_tile <- wind_shifts_all |>
+  filter(shift %in% top_shifts) |>
+  count(shift, month_num, name = "n") |>
+  group_by(shift) |>
+  mutate(
+    prop = n / sum(n)
+  ) |>
+  ungroup()
+
+
+shift_tile_plot <- ggplot(
+  wind_shifts_tile,
+  aes(
+    x = month_num,
+    y = forcats::fct_reorder(shift, prop, .fun = max),
+    fill = prop
+  )
+) +
+  geom_tile(color = "white") +
+  scale_x_continuous(
+    breaks = 1:12,
+    labels = month.abb
+  ) +
+  scale_fill_viridis_c(
+    option = "C",
+    labels = scales::percent_format(accuracy = 1),
+    name = "Proportion\nof occurrences"
+  ) +
+  labs(
+    title = "Seasonal Timing of Common Wind Direction Shifts",
+    subtitle = "Monthly distribution of the top 6 wind-direction transitions",
+    x = "Month",
+    y = "Wind direction shift"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    legend.position = "bottom"
+  )
+
+shift_tile_plot
+```
+```{r histogram shift plot}
+shift_hist_plot <- ggplot(
+  wind_shifts_density,
+  aes(x = month_num)
+) +
+  geom_bar(fill = "steelblue", color = "white") +
+  facet_wrap(~ shift, ncol = 2) +
+  scale_x_continuous(
+    breaks = 1:12,
+    labels = month.abb
+  ) +
+  labs(
+    title = "Seasonal Timing of Common Wind Direction Shifts",
+    subtitle = "Monthly counts of observed shifts, faceted by direction shift",
+    x = "Month",
+    y = "Number of observations"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.minor = element_blank(),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    strip.text = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+shift_hist_plot
+
+ggsave(
+  filename = "../figures/top_wind_shift_seasonal_histogram_facets.png",
+  plot = shift_hist_plot,
+  width = 11,
+  height = 8,
+  units = "in",
+  dpi = 300
+)
+```
+
+
+```{r frequency of wind by direction most frequent}
+journal_wind_df |>
+  filter(!is.na(wind_direction)) |>
+  count(wind_direction) |>
+  ggplot(aes(x = reorder(wind_direction, n), y = n)) +
+  geom_col(width = 0.75) +
+  geom_text(aes(label = n), hjust = -0.1, size = 3) +
+  coord_flip() +
+  labs(
+    title = "Frequency of Wind by Direction",
+    subtitle = "Ordered by most frequent",
+    x = "Wind direction",
+    y = "Number of observations"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
+
+```
+
+```{r wind direction by frequency}
+journal_wind_df |>
+  filter(!is.na(wind_direction)) |>
+  count(wind_direction) |>
+  ggplot(aes(x = reorder(wind_direction, -n), y = n)) +
+  geom_col(width = 0.75) +
+  geom_text(aes(label = n), vjust = -0.3, size = 3) +
+  labs(
+    title = "Frequency of Wind by Direction",
+    subtitle = "Ordered by most frequent",
+    x = "Wind direction",
+    y = "Number of observations"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
+
+```
+
+```{r proportion plot of relative frequency of wind by direction}
+journal_wind_df |>
+  filter(!is.na(wind_direction)) |>
+  count(wind_direction) |>
+  mutate(prop = n / sum(n)) |>
+  ggplot(aes(x = wind_direction, y = prop)) +
+  geom_col(width = 0.75) +
+  geom_text(aes(label = scales::percent(prop, accuracy = 0.1)),
+            vjust = -0.3, size = 3) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  scale_x_discrete(limits = c("N","NE","E","SE","S","SW","W","NW")) +
+  labs(
+    title = "Relative Frequency of Wind by Direction",
+    subtitle = "Proportion of total observations",
+    x = "Wind direction",
+    y = "Proportion of observations"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
+
+
+
+```
+
