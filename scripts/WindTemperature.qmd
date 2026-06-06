@@ -1,0 +1,278 @@
+---
+title: "Temperature Analysis"
+format: html
+editor: visual
+---
+
+## Reading in the data
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(stringr)
+library(magrittr) 
+library(tidyverse)
+library(tidytext)
+library(googlesheets4)
+```
+
+## Read in the Data
+
+```{r}
+journals <- read_csv("../data/journals_all.csv") 
+
+journal_data <- journals |>
+  select(date_mdy, journal_year, month, journal_entry, location, local_place, latitude, longitude) 
+```
+
+## Explorations
+
+How many journal entries mention Thermometer or degrees?
+
+```{r}
+journal_data <- journal_data |>
+  mutate(temp_reported = str_detect(journal_entry, pattern = "Thermometer|thermometer"),
+         degree_reported = str_detect(journal_entry, pattern = "degree|°"))
+```
+
+
+## Temperature
+
+```{r}
+
+test_entries <- c("The wind North West Thermometer from 32° up to 40 degrees very pleasant.",
+                  "Wind South West fresh breeze. Commenced putting fore foot on the Black Warrior work untill noon left on account of tide Thermometer 40",
+                  "The wind Westerly. Thermometer about 59 degrees work about home.",
+                  "The wind North East Thermometer 15 degrees below zero at 8 oclock A.M",
+                  "The wind North West The Thermometer from 0 to 6 above. Wrote letter to C C Burrill.",
+                  "Ther. 28 degrees",
+                  "The Thermometer. 38 degrees to 42 degrees above zero.",
+                  "The wind North West thermometer 32° in morning work.",
+                  "Thermometer in morn 28",
+                  "The wind North East. Thermometer 28° overcast.",
+                  "The wind West North West Thermometer. from 12 to 16",
+                  "Thermometer down to zero",
+                  "Thermometer at noon 18 degrees")
+
+```
+
+## Extract the temperature
+
+```{r}
+
+temp_pattern1 <- regex(
+  paste0(
+    "\\b(?:thermometer?\\.?)(?=\\s)",          # thermometer
+    "\\s*",
+    "(?:from\\s*)?",                           # optional from
+    "(?:stood\\s*)?",                          # optional stood
+    "(?:at\\s*)?",                             # optional at
+    "(?:from\\s*)?",                           # optional about
+    "(?:noon\\s*)?",                           # optional noon
+    "(?:down\\s+to\\s*)?",                     # optional down to
+    "(?:up\\s+to\\s*)?",                       # optional up to
+    "(?:in\\s+(?:the\\s+)?morn(?:ing)\\s*)?",      # optional in morning / in the morning
+    "(?:at\\s*)?",                             # optional at    
+    "\\d+",                                    # first temperature
+    "\\s*",
+    "(?:°|\\*|degrees?)?",                     # optional degree symbol/star/degrees
+    "\\s*",
+    "(?:(?:up\\s+to|to|down\\s+to)\\s*\\d+)?"             # optional second temperature
+  ),
+  ignore_case = TRUE
+)
+
+temp_pattern <- regex(
+  paste0(
+    "\\b(?:thermometer|ther\\.?)",              # Thermometer, Ther, Ther.
+    "\\b\\.?",                                  # optional period
+    "(?:\\s+\\w+){0,8}?",                       # allow short phrase after thermometer
+    "\\s*",
+    "(?:from\\s*)?",                            # optional from
+    "(?:about|abt\\.?|at|was|being|stood|standing|ranging|went|down|up|most|almost|only)*\\s*",
+    "(?:from\\s*)?",
+    "(\\d+)",                                   # first temp
+    "\\s*(?:°|\\*|'|degrees?|degree)?",         # temp marker
+    "\\s*",
+    "(?:(?:up\\s+to|down\\s+to|to)\\s*(\\d+))?",# optional second temp
+    "\\s*(?:°|\\*|'|degrees?|degree)?"
+  ),
+  ignore_case = TRUE
+)
+
+below_zero_pattern <- regex(
+  paste0(
+    "\\b(?:thermometer|ther\\.?)",
+    ".*?",
+    "(?:below\\s*(?:zero|0)|below\\b)"
+  ),
+  ignore_case = TRUE
+)
+
+extract_temps <- function(x) {
+  
+    x <- str_replace_all(
+    x,
+    regex("zero", ignore_case = TRUE),
+    "0"
+  )
+  
+  temp_text <- str_extract_all(x, temp_pattern)
+
+  map(
+    temp_text,
+    \(matches) {
+      str_extract_all(matches, "\\d+") |>
+        unlist() |>
+        as.numeric()
+    }
+  )
+}
+
+```
+
+```{r test-temperatures}
+
+tibble(journal_entry = test_entries) |>
+  mutate(temp_values = extract_temps(journal_entry)) |>
+  unnest_wider(
+    temp_values,
+    names_sep = "_",
+    names_repair = "unique"
+  ) |>
+  mutate(
+    below_zero = str_detect(journal_entry, below_zero_pattern),
+    below_zero = replace_na(below_zero, FALSE)
+    )
+```
+
+
+```{r}
+
+journal_temp_data <- journal_data |>
+  mutate(
+    below_zero = str_detect(journal_entry, below_zero_pattern),
+    below_zero = replace_na(below_zero, FALSE),
+    temp_values = extract_temps(journal_entry),
+    temp_values = map2(
+      temp_values,
+      below_zero,
+      \(temps, below_zero) {
+        if (isTRUE(below_zero)) -temps else temps
+      }
+    ),
+    temp_mentioned = map_lgl(temp_values, ~ length(.x) > 0)
+  ) |>
+  unnest_wider(
+    temp_values,
+    names_sep = "_",
+    names_repair = "unique"
+  )
+
+temp_check <- journal_temp_data |> filter(temp_reported == TRUE & is.na(temp_values_1))
+
+degree_check <- journal_temp_data |> filter(degree_reported == TRUE & is.na(temp_values_1))
+ #3d degree, Third degree, some mispellings of thermometer
+```
+
+```{r}
+temp_ts <- journal_temp_data |>
+  mutate(
+    temp_first = as.numeric(temp_values_1)
+  ) |>
+  filter(
+    !is.na(date_mdy),
+    !is.na(temp_first)
+  ) |>
+  filter(year(date_mdy) < max(journal_year))
+
+temp_ts_check <- temp_ts |>
+  select(date_mdy, month, journal_entry, below_zero, temp_values_1)
+
+temp_time_series <- ggplot(temp_ts, aes(x = date_mdy, y = temp_first, color = year)) +
+  geom_line(alpha = 0.6) +
+  labs(
+    title = "Extracted Temperature Over Time",
+    subtitle = "First extracted temperature value from each journal entry",
+    x = "Date",
+    y = "Temperature"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.minor = element_blank(),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  ) |>
+  facet_wrap(~month)
+
+temp_time_series
+
+ggsave(
+  filename = "../figures/first_extracted_temperature_time_series.png",
+  plot = temp_time_series,
+  width = 11,
+  height = 6,
+  units = "in",
+  dpi = 300
+)
+```
+
+```{r}
+## What proportion of days with journal entries include a temperature?
+
+temp_reporting_prop <- journal_temp_data |>
+  mutate(year = lubridate::year(date_mdy)) |>
+  filter(year <= max(journal_year)) |>
+  group_by(year) |>
+  summarise(
+    total_entries = n(),
+    temp_entries = sum(!is.na(temp_values_1)),
+    therm_entries = sum(temp_reported == TRUE),
+    prop_temp = temp_entries / total_entries,
+    prop_therm = therm_entries / total_entries
+  )
+
+ggplot(temp_reporting_prop) +
+  geom_line(aes(year, prop_temp), alpha = 0.3) +
+  geom_line(aes(year, prop_therm), color = "blue", alpha = 0.3) +
+  geom_point(aes(year, prop_temp), alpha = 0.3) +
+  geom_point(aes(year, prop_therm), color = "blue", alpha = 0.3) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    title = "Proportion of Journal Entries Reporting Temperature",
+    x = "Year",
+    y = "Proportion of entries"
+  ) +
+  theme_minimal(base_size = 14)
+```
+
+## Some open questions:
+
+Where and when did he report temperature?
+
+## Plotting a heatmap
+
+```{r heatmap of temp}
+temp_reporting_monthly <- journal_data |>
+  mutate(
+    year = lubridate::year(date_mdy),
+    month = factor(month, levels = month.name)
+  ) |>
+  filter(!is.na(temp_values_1)) |>
+  count(year, month)
+
+ggplot(temp_reporting_monthly,
+       aes(x = month, y = factor(year), fill = n)) +
+  geom_tile(color = "white") +
+  scale_fill_viridis_c(name = "Days") +
+  labs(
+    title = "Temperature Reporting Frequency",
+    x = "Month",
+    y = "Year"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
