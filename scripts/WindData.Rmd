@@ -32,6 +32,7 @@ library(tidyverse)
 library(stringr)
 library(magrittr) 
 library(tidyverse)
+library(ggrepel)
 library(tidytext)
 library(googlesheets4)
 library(gargle)
@@ -139,10 +140,11 @@ extract_wind_clause <- function(x) {
   str_extract(x, wind_clause_regex)
 }
 
+```
+
+```{r Extract the wind clause and first direction}
 # -------------------------
-# Extract the direction token with stringr::str_extract()
-# -------------------------
-# Extract wind clause, then pull out the first direction token from it.
+# Extract wind clause and first direction
 
 extract_first_wind_direction <- function(x) {
   clause <- str_extract_all(x, wind_clause_regex)
@@ -184,7 +186,7 @@ extract_second_wind_direction <- function(x) {
 ```
 
 
-```{r testing wind}
+```{r wind test entries}
 
 test_entries <- c(
   # One wind direction only
@@ -506,13 +508,13 @@ check_wind <- debug_wind(test_df$entry)
 
 
 ```{r wind_extraction}
-# -------------------------
+
 # Extract clause from journal_entry
 journal_data <- journal_data |>
   mutate(wind_clause = extract_wind_clause(journal_entry),
          before_wind_clause = extract_wind_before_clause(journal_entry))
 
-# Step B: extract first + second direction tokens from journal_entry
+# Extract first + second direction tokens from journal_entry
 journal_data <- journal_data |>
   mutate(wind_dir_token = coalesce(extract_direction_before_wind(journal_entry), extract_first_wind_direction(journal_entry)
                                    
@@ -591,7 +593,7 @@ journal_data <- journal_data |>
 
 ## Plot of Wind Reporting
 
-```{r}
+```{r create wind reporting timeseries}
 wind_month_cat_ts <- journal_data |>
   filter(year(date_mdy) < 1896) |>
   mutate(
@@ -612,7 +614,7 @@ wind_month_cat_ts <- journal_data |>
   )
 ```
 
-```{r}
+```{r wind reproting plot}
 wind_month_cat_ts_plot <- ggplot(
   wind_month_cat_ts,
   aes(x = year_month, y = n, fill = wind_category)
@@ -639,7 +641,7 @@ wind_month_cat_ts_plot <- ggplot(
 wind_month_cat_ts_plot
 ```
 
-```{r}
+```{r save wind monthly reporting category timeseries}
 ggsave(
   filename = "../figures/wind_month_category_timeseries.png",
   plot = wind_month_cat_ts_plot,
@@ -990,50 +992,127 @@ ggsave(
 ```
 
 
-```{r frequency of wind direction by month}
-top_dirs <- journal_data |>
-  filter(!is.na(wind_dir_code_1)) |>
-  count(wind_dir_code_1, sort = TRUE) |>
-  slice_head(n = 8) |>
-  pull(wind_dir_code_1)
+```{r frequency of wind direction by year and month}
 
-monthly_wind <- journal_data |>
-  filter(wind_dir_code_1 %in% top_dirs) |>
-  count(month, wind_dir_code_1) |>
-  group_by(month) |>
-  mutate(prop = n / sum(n)) |>
-  ungroup() |>
-  mutate(
-    month_abbr = month(
-      match(
-        month,
-        month.name
-      ),
+directions_8 <- c("N", "NE", "E", "SE", "S", "SW", "W", "NW")
+
+monthly_year_wind <- journal_data |>
+    mutate(month_abbr = month(
+      match(month, month.name),
       label = TRUE,
       abbr = TRUE
     ),
-    highlight = case_when(!wind_dir_code_1 %in% c("S", "N", "NW", "E", "W") ~ "Other",
-                          TRUE ~ wind_dir_code_1)
-  )
+    date_mdy = as.Date(date_mdy),
+    year = lubridate::year(date_mdy)) |>
+    mutate(
+    wind_dir_8 = case_when(
+    
+      # North
+      wind_dir_code_1 %in% c(
+        "N", "NbE", "NbW"
+      ) ~ "N",
+    
+      # Northeast
+      wind_dir_code_1 %in% c(
+        "NNE", "NEbN", "NE", "NEbE", "ENE"
+      ) ~ "NE",
+    
+      # East
+      wind_dir_code_1 %in% c(
+        "EbN", "E", "EbS"
+      ) ~ "E",
+    
+      # Southeast
+      wind_dir_code_1 %in% c(
+        "ESE", "SEbE", "SE", "SEbS", "SSE"
+      ) ~ "SE",
+    
+      # South
+      wind_dir_code_1 %in% c(
+        "SbE", "S", "SbW"
+      ) ~ "S",
+    
+      # Southwest
+      wind_dir_code_1 %in% c(
+        "SSW", "SWbS", "SW", "SWbW", "WSW"
+      ) ~ "SW",
+    
+      # West
+      wind_dir_code_1 %in% c(
+        "WbS", "W", "WbN"
+      ) ~ "W",
+    
+      # Northwest
+      wind_dir_code_1 %in% c(
+        "WNW", "NWbW", "NW", "NWbN", "NNW"
+      ) ~ "NW",
+    
+      TRUE ~ NA_character_
+    ),
+    wind_dir_8 = factor(wind_dir_8, levels = directions_8)
+  ) |>
+  filter(!is.na(wind_dir_8)) |>
+  count(month_abbr, month, year, wind_dir_8) |>
+  group_by(month_abbr, month, year) |>
+  mutate(prop = n / sum(n)) |>
+  ungroup()
+```
+
+
+```{r proportion of wind direction by monthly wind}
+monthly_wind <- journal_data |>
+  mutate(
+    date_mdy = as.Date(date_mdy),
+    year = lubridate::year(date_mdy),
+    month_num = lubridate::month(date_mdy),
+    month_abbr = factor(month.abb[month_num], levels = month.abb),
+
+    wind_dir_8 = case_when(
+      wind_dir_code_1 %in% c("N", "NbE", "NbW") ~ "N",
+      wind_dir_code_1 %in% c("NNE", "NEbN", "NE", "NEbE", "ENE") ~ "NE",
+      wind_dir_code_1 %in% c("EbN", "E", "EbS") ~ "E",
+      wind_dir_code_1 %in% c("ESE", "SEbE", "SE", "SEbS", "SSE") ~ "SE",
+      wind_dir_code_1 %in% c("SbE", "S", "SbW") ~ "S",
+      wind_dir_code_1 %in% c("SSW", "SWbS", "SW", "SWbW", "WSW") ~ "SW",
+      wind_dir_code_1 %in% c("WbS", "W", "WbN") ~ "W",
+      wind_dir_code_1 %in% c("WNW", "NWbW", "NW", "NWbN", "NNW") ~ "NW",
+      TRUE ~ NA_character_
+    ),
+    wind_dir_8 = factor(wind_dir_8, levels = directions_8)
+  ) |>
+  filter(
+    !is.na(year),
+    !is.na(month_num),
+    !is.na(wind_dir_8)
+  ) |>
+  count(month_num, month_abbr, wind_dir_8, name = "n") |>
+  group_by(month_num, month_abbr) |>
+  mutate(prop = n / sum(n)) |>
+  ungroup()
 
 wind_heatmap <- ggplot(
   monthly_wind,
   aes(
     x = month_abbr,
-    y = fct_reorder(wind_dir_code_1, prop, .fun = max),
+    y = wind_dir_8,
     fill = prop
   )
 ) +
   geom_tile(color = "white") +
-  scale_fill_viridis_c(labels = scales::percent_format()) +
+  scale_y_discrete(limits = rev(directions_8)) +
+  scale_fill_viridis_c(
+    labels = scales::percent_format(),
+    name = "Proportion"
+  ) +
   labs(
     title = "Seasonal Trends in Wind Direction",
-    subtitle = "Relative frequency within month",
+    subtitle = "Relative frequency within month from 1873-1899",
     x = "Month",
-    y = "Wind direction",
-    fill = "Proportion"
+    y = "Wind direction"
   ) +
   theme_minimal(base_size = 12)
+
+wind_heatmap
 
 ggsave(
   filename = "../figures/wind_direction_monthly_heat_map.png",
@@ -1046,8 +1125,226 @@ ggsave(
 
 ```
 
-```{r monthly wind heat map polar}
 
+```{r Wind sector summary - Nor'easter}
+
+winter_sector_summary <- monthly_year_wind |>
+  filter(month_abbr %in% c("Oct", "Nov", "Dec", "Jan", "Feb", "Mar")) |>
+  mutate(
+    month_abbr = factor(
+      month_abbr,
+      levels = c("Oct", "Nov", "Dec", "Jan", "Feb", "Mar")
+    ),
+    wind_sector = case_when(
+      wind_dir_8 %in% c("N", "NW") ~ "Northern / NW",
+      wind_dir_8 %in% c("NE", "E", "SE") ~ "Easterly",
+      wind_dir_8 %in% c("S", "SW") ~ "Southerly / SW",
+      wind_dir_8 == "W" ~ "Westerly",
+      TRUE ~ NA_character_
+    )
+  ) |>
+  filter(!is.na(wind_sector)) |>
+  group_by(year, month_abbr, wind_sector) |>
+  summarise(
+    prop = sum(prop, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  group_by(month_abbr, wind_sector) |>
+  summarise(
+    median_prop = median(prop, na.rm = TRUE),
+    q25 = quantile(prop, 0.25, na.rm = TRUE),
+    q75 = quantile(prop, 0.75, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+noreaster_sector_plot <- ggplot(
+  winter_sector_summary,
+  aes(
+    x = month_abbr,
+    y = median_prop,
+    color = wind_sector,
+    fill = wind_sector,
+    group = wind_sector
+  )
+) +
+  geom_ribbon(
+    aes(ymin = q25, ymax = q75),
+    alpha = 0.18,
+    color = NA
+  ) +
+  geom_line(linewidth = 1.3) +
+  geom_point(size = 2.5) +
+  scale_y_continuous(
+    labels = scales::percent_format()
+  ) +
+  scale_color_viridis_d(name = "Wind sector") +
+  scale_fill_viridis_d(name = "Wind sector") +
+  labs(
+    title = "Winter Wind Sectors During Nor'easter Season",
+    subtitle = "Median monthly proportion of wind observations, Oct–Mar\nRibbon shows 25th–75th percentile range across years",
+    x = NULL,
+    y = "Proportion of wind observations"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "bottom",
+    panel.grid.minor = element_blank(),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
+
+noreaster_sector_plot
+
+```
+
+```{r save noreaster plot}
+ggsave(
+  filename = "../figures/noreaster_winter_wind_sector_ribbon_plot.png",
+  plot = noreaster_sector_plot,
+  width = 11,
+  height = 7,
+  units = "in",
+  dpi = 300,
+  bg = "white"
+)
+```
+
+
+```{r monthly wind time series ribbon plot}
+
+monthly_wind_summary <- monthly_year_wind |>
+  mutate(
+    month_num = match(as.character(month_abbr), month.abb)
+  ) |>
+  group_by(month_num, month_abbr, wind_dir_8) |>
+  summarise(
+    median_prop = median(prop, na.rm = TRUE),
+    q25 = quantile(prop, 0.25, na.rm = TRUE),
+    q75 = quantile(prop, 0.75, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+monthly_wind_ribbon <- ggplot(
+  monthly_wind_summary,
+  aes(
+    x = month_num,
+    y = median_prop,
+    color = wind_dir_8,
+    fill = wind_dir_8,
+    group = wind_dir_8
+  )
+) +
+  geom_ribbon(
+    aes(ymin = q25, ymax = q75),
+    alpha = 0.18,
+    color = NA
+  ) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 2) +
+  scale_x_continuous(
+    breaks = 1:12,
+    labels = month.abb
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format()
+  ) +
+  scale_color_viridis_d(name = "Direction") +
+  scale_fill_viridis_d(name = "Direction") +
+  labs(
+    title = "Typical Monthly Wind Direction Pattern",
+    subtitle = "Line shows median monthly proportion across years; ribbon shows 25th–75th percentile range",
+    x = "Month",
+    y = "Proportion of wind observations"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "bottom",
+    panel.grid.minor = element_blank(),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+monthly_wind_ribbon
+
+ggsave(
+  filename = "../figures/monthly_wind_direction_8_median_ribbon.png",
+  plot = monthly_wind_ribbon,
+  width = 11,
+  height = 7,
+  units = "in",
+  dpi = 300
+)
+
+```
+
+```{r}
+winter_wind_summary <- monthly_wind_summary |>
+  filter(month_abbr %in% c("Oct", "Nov", "Dec", "Jan", "Feb", "Mar")) |>
+    mutate(
+    month_abbr = factor(
+      month_abbr,
+      levels = c("Oct", "Nov", "Dec", "Jan", "Feb", "Mar")
+    )
+  )
+
+
+
+winter_ribbon_plot <- ggplot(
+  winter_wind_summary,
+  aes(
+    x = month_abbr,
+    y = median_prop,
+    color = wind_dir_8,
+    fill = wind_dir_8,
+    group = wind_dir_8
+  )
+) +
+  geom_ribbon(
+    aes(ymin = q25, ymax = q75),
+    alpha = 0.15,
+    color = NA
+  ) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 2) +
+  scale_y_continuous(
+    labels = scales::percent_format()
+  ) +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  labs(
+    title = "Winter Wind Direction Patterns",
+    subtitle = "Median monthly proportion (Oct–Mar)\nRibbon shows interquartile range across years",
+    x = NULL,
+    y = "Proportion of wind observations",
+    color = "Direction",
+    fill = "Direction"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "bottom",
+    panel.grid.minor = element_blank(),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
+
+winter_ribbon_plot
+
+
+ggsave(
+  filename = "../figures/winter_wind_direction_ribbon_plot.png",
+  plot = winter_ribbon_plot,
+  width = 12,
+  height = 7,
+  units = "in",
+  dpi = 300,
+  bg = "white"
+)
+
+```
+
+
+```{r monthly wind heat map polar}
 
 month_levels <- c(
   "January", "February", "March", "April", "May", "June",
@@ -1166,7 +1463,7 @@ monthly_wind_16_heatmap <- journal_data |>
   )
 
 polar_16_med_heatmap <- ggplot(
-  monthly_wind_heatmap,
+  monthly_wind_16_heatmap,
   aes(wind_dir_16, month, fill = median_fill)
 ) +
   geom_tile(color = "grey80") +
@@ -1196,6 +1493,8 @@ polar_16_med_heatmap <- ggplot(
     legend.title = element_text(size = 18),
     legend.text = element_text(size = 16)
   )
+
+polar_16_med_heatmap
 
 ggsave(
   filename = "../figures/polar_16_med_heatmap.png",
@@ -1322,6 +1621,7 @@ ggsave(
 
 ```{r monthly summary plot}
 monthly_summary <- monthly_year_wind |>
+  case_when()
   group_by(month, highlight) |>
   summarise(
     median_prop = median(prop, na.rm = TRUE),
@@ -2092,5 +2392,210 @@ journal_wind_df |>
 
 
 
+```
+
+# Looking at stretches of wind for storms
+
+```{r}
+
+
+directions_8 <- c("N", "NE", "E", "SE", "S", "SW", "W", "NW")
+
+collapse_to_8 <- function(x) {
+  case_when(
+    x %in% c("N", "NbE", "NbW") ~ "N",
+    x %in% c("NNE", "NEbN", "NE", "NEbE", "ENE") ~ "NE",
+    x %in% c("EbN", "E", "EbS") ~ "E",
+    x %in% c("ESE", "SEbE", "SE", "SEbS", "SSE") ~ "SE",
+    x %in% c("SbE", "S", "SbW") ~ "S",
+    x %in% c("SSW", "SWbS", "SW", "SWbW", "WSW") ~ "SW",
+    x %in% c("WbS", "W", "WbN") ~ "W",
+    x %in% c("WNW", "NWbW", "NW", "NWbN", "NNW") ~ "NW",
+    TRUE ~ NA_character_
+  )
+}
+
+storm_dirs <- c("NE", "E", "SE")
+
+
+
+
+
+storm_candidates <- journal_data |>
+  mutate(
+    date_mdy = as.Date(date_mdy),
+    year = year(date_mdy),
+    month = month(date_mdy, label = TRUE, abbr = TRUE),
+
+    wind_dir_1_8 = collapse_to_8(wind_dir_code_1),
+    wind_dir_2_8 = collapse_to_8(wind_dir_code_2),
+
+    easterly_wind_1 = wind_dir_1_8 %in% c("NE", "E", "SE"),
+    easterly_wind_2 = wind_dir_2_8 %in% c("NE", "E", "SE"),
+
+    possible_storm_wind = easterly_wind_1 | easterly_wind_2
+  ) |>
+  arrange(date_mdy)
+```
+
+```{r possible storm entries}
+possible_storm_entries <- storm_candidates |>
+  filter(possible_storm_wind) |>
+  select(
+    date_mdy,
+    year,
+    month,
+    wind_dir_code_1,
+    wind_dir_code_2,
+    wind_dir_1_8,
+    wind_dir_2_8,
+    journal_entry
+  )
+```
+
+```{r storm stretches}
+storm_stretches <- possible_storm_entries |>
+  arrange(date_mdy) |>
+  mutate(
+    day_gap = as.numeric(date_mdy - lag(date_mdy)),
+    new_stretch = is.na(day_gap) | day_gap > 1,
+    storm_id = cumsum(new_stretch)
+  )
+```
+
+```{r candidate storm events}
+
+storm_events <- storm_stretches |>
+  group_by(storm_id) |>
+  summarise(
+    start_date = min(date_mdy),
+    end_date = max(date_mdy),
+    duration_days = as.numeric(end_date - start_date) + 1,
+    n_entries = n(),
+    directions_1 = paste(unique(na.omit(wind_dir_code_1)), collapse = ", "),
+    directions_2 = paste(unique(na.omit(wind_dir_code_2)), collapse = ", "),
+    sectors_1 = paste(unique(na.omit(wind_dir_1_8)), collapse = ", "),
+    sectors_2 = paste(unique(na.omit(wind_dir_2_8)), collapse = ", "),
+    entries = paste(
+      paste(date_mdy, journal_entry, sep = ": "),
+      collapse = "\n\n"
+    ),
+    .groups = "drop"
+  ) |>
+  filter(duration_days >= 2)
+
+```
+
+```{r count of storm events by year and month}
+storm_events_by_year <- storm_events |>
+  mutate(year = year(start_date), 
+         month = month(start_date)) |>
+  count(year, month, name = "n_candidate_storms") |>
+  mutate(
+    month_abb = factor(
+      month.abb[month],
+      levels = month.abb
+    )
+  )
+```
+
+```{r}
+storm_month_plot <- ggplot(
+  storm_events_by_year,
+  aes(
+    x = month_abb,
+    y = n_candidate_storms
+  )
+) +
+  geom_col(fill = "steelblue") +
+  facet_wrap(
+    ~ year,
+    scales = "free_y"
+  ) +
+  labs(
+    title = "Candidate Storm Events by Month and Year",
+    subtitle = "Storms defined as stretches with easterly (NE/E/SE) winds in either recorded direction",
+    x = "Month",
+    y = "Number of candidate storms"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1
+    ),
+    strip.text = element_text(face = "bold")
+  )
+
+storm_month_plot
+```
+```{r}
+storm_pattern <- regex(
+  paste(
+    c(
+      "storm", "gale", "blow", "blew", "blowing",
+      "heavy sea", "high sea", "rough sea",
+      "snow storm", "snowstorm", "snowing hard",
+      "rain storm", "heavy rain",
+      "tempest", "squall",
+      "violent", "hard wind",
+      "fresh gale", "strong breeze",
+      "hurricane"
+    ),
+    collapse = "|"
+  ),
+  ignore_case = TRUE
+)
+
+impact_pattern <- regex(
+  paste(
+    c(
+      "could not",
+      "unable",
+      "stayed home",
+      "remained home",
+      "rough",
+      "confined",
+      "prevented",
+      "did not go",
+      "couldn't",
+      "heavy sea"
+    ),
+    collapse = "|"
+  ),
+  ignore_case = TRUE
+)
+
+
+journal_data <- journal_data |>
+  mutate(
+    storm_text = str_detect(journal_entry, storm_pattern),
+    storm_impact = str_detect(journal_entry, impact_pattern)
+  )
+```
+
+### Storm topic modeling
+
+```{r}
+storm_words <- storm_entries |>
+  unnest_tokens(word, journal_entry) |>
+  anti_join(stop_words) |>
+  count(word, sort = TRUE)
+
+nonstorm_words <- nonstorm_entries |>
+  unnest_tokens(word, journal_entry) |>
+  anti_join(stop_words) |>
+  count(word, sort = TRUE)
+```
+
+
+```{r storm score}
+# storm_score =
+#   2 * easterly_wind +
+#   2 * multi_day_easterly +
+#   1 * storm_text +
+#   1 * storm_impact +
+#   1 * strong_wind_description
 ```
 
